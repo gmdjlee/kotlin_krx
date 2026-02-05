@@ -4,7 +4,7 @@ import com.krxkt.KrxEtf
 import kotlinx.coroutines.runBlocking
 
 /**
- * ETF 구성종목 테스트
+ * ETF 구성종목 테스트https://github.com/sharebook-kr/pykrx
  *
  * 471040 ETF의 구성종목 정보를 출력합니다.
  */

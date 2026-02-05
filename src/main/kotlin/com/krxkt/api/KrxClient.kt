@@ -97,10 +97,10 @@ class KrxClient(
             .addHeader("User-Agent", KrxEndpoints.USER_AGENT)
             .addHeader("Accept", "application/json, text/javascript, */*; q=0.01")
             .addHeader("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7")
-            .addHeader("Accept-Encoding", "gzip, deflate")
+            // Accept-Encoding은 OkHttp가 자동 처리 (gzip 압축 해제 포함)
             .addHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
             .addHeader("X-Requested-With", "XMLHttpRequest")
-            .addHeader("Origin", "http://data.krx.co.kr")
+            .addHeader("Origin", "https://data.krx.co.kr")
             .build()
 
         okHttpClient.newCall(request).execute().use { response ->

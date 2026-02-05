@@ -8,14 +8,18 @@ import com.krxkt.error.KrxError
  * KRX API JSON 응답 파서
  *
  * KRX 응답 특징:
- * - 데이터는 OutBlock_1 배열에 포함
+ * - 데이터는 OutBlock_1 또는 output 배열에 포함
  * - 숫자에 쉼표 포함 ("82,200")
  * - 빈 값은 "-" 또는 ""로 표현
  */
 object KrxJsonParser {
 
     /**
-     * JSON 응답에서 OutBlock_1 배열 추출
+     * JSON 응답에서 데이터 배열 추출
+     *
+     * KRX API는 엔드포인트에 따라 다른 키를 사용:
+     * - OutBlock_1: 대부분의 STAT 엔드포인트
+     * - output: ETF 목록 등 일부 엔드포인트
      *
      * @param json KRX API JSON 응답 문자열
      * @return JsonObject 리스트 (빈 응답 시 빈 리스트)
@@ -24,7 +28,11 @@ object KrxJsonParser {
     fun parseOutBlock(json: String): List<JsonObject> {
         return try {
             val root = JsonParser.parseString(json).asJsonObject
-            val outBlock = root.getAsJsonArray("OutBlock_1") ?: return emptyList()
+
+            // OutBlock_1 또는 output 키 시도
+            val outBlock = root.getAsJsonArray("OutBlock_1")
+                ?: root.getAsJsonArray("output")
+                ?: return emptyList()
 
             outBlock.mapNotNull { element ->
                 if (element.isJsonObject) element.asJsonObject else null

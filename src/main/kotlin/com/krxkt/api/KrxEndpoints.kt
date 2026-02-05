@@ -18,8 +18,8 @@ object KrxEndpoints {
     /** HTTPS URL (일부 환경에서 필요) */
     const val BASE_URL_HTTPS = "https://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd"
 
-    /** 필수 Referer 헤더 (없으면 403 에러) */
-    const val REFERER = "http://data.krx.co.kr/contents/MDC/MDI/mdiLoader/index.cmd?menuId=MDC0201020101"
+    /** 필수 Referer 헤더 (없으면 LOGOUT 응답) */
+    const val REFERER = "https://data.krx.co.kr/contents/MDC/MDI/outerLoader/index.cmd"
 
     /** User-Agent 헤더 (브라우저 시뮬레이션) */
     const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
