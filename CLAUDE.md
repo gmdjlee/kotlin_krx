@@ -144,7 +144,17 @@ com.krxkt/
 | Fundamentals | `dbms/MDC/STAT/standard/MDCSTAT03501` |
 | Ticker List | `dbms/MDC/STAT/standard/MDCSTAT01901` |
 | ETF Price | `dbms/MDC/STAT/standard/MDCSTAT04301` |
+| ETF History | `dbms/MDC/STAT/standard/MDCSTAT04501` |
+| ETF Ticker List | `dbms/MDC/STAT/standard/MDCSTAT04601` |
+| ETF Portfolio | `dbms/MDC/STAT/standard/MDCSTAT05001` |
 | Index OHLCV | `dbms/MDC/STAT/standard/MDCSTAT00301` |
+| Index List | `dbms/MDC/STAT/standard/MDCSTAT00101` |
+| Investor Trading (Market) | `dbms/MDC/STAT/standard/MDCSTAT02203` |
+| Investor Trading (Ticker) | `dbms/MDC/STAT/standard/MDCSTAT02303` |
+| Short Selling (All) | `dbms/MDC/STAT/srt/MDCSTAT30101` |
+| Short Selling (Ticker) | `dbms/MDC/STAT/srt/MDCSTAT30102` |
+| Short Balance (All) | `dbms/MDC/STAT/srt/MDCSTAT30501` |
+| Short Balance (Ticker) | `dbms/MDC/STAT/srt/MDCSTAT30502` |
 
 ### pykrx → Kotlin API Mapping
 
@@ -155,7 +165,18 @@ com.krxkt/
 | `stock.get_market_cap("20210122")` | `krxStock.getMarketCap(date)` |
 | `stock.get_market_fundamental("20210122")` | `krxStock.getMarketFundamental(date)` |
 | `stock.get_market_ticker_list("20210122")` | `krxStock.getTickerList(date)` |
-| `etf.get_etf_price("20210122")` | `krxEtf.getEtfPrice(date)` |
+| `etf.get_etf_ohlcv_by_ticker("20210122")` | `krxEtf.getEtfPrice(date)` |
+| `etf.get_etf_ohlcv_by_date("20210101", "20210131", "069500")` | `krxEtf.getOhlcvByTicker(start, end, ticker)` |
+| `etf.get_etf_ticker_list("20210122")` | `krxEtf.getEtfTickerList(date)` |
+| `etf.get_etf_portfolio_deposit_file("20210122", "069500")` | `krxEtf.getPortfolio(date, ticker)` |
+| `index.get_index_ohlcv("20210101", "20210131", "1001")` | `krxIndex.getOhlcv(start, end, ticker)` |
+| (N/A) | `krxIndex.getKospi(start, end)` |
+| (N/A) | `krxIndex.getKosdaq(start, end)` |
+| (N/A) | `krxIndex.getKospi200(start, end)` |
+| `stock.get_market_trading_value_by_date(...)` | `krxStock.getMarketTradingByInvestor(...)` |
+| `stock.get_market_trading_value_by_date(..., ticker)` | `krxStock.getTradingByInvestor(...)` |
+| `stock.get_shorting_volume_by_ticker(...)` | `krxStock.getShortSellingByTicker(...)` |
+| `stock.get_shorting_balance_by_ticker(...)` | `krxStock.getShortBalanceByTicker(...)` |
 
 ---
 
@@ -167,6 +188,23 @@ com.krxkt/
 | Parse Errors | Return empty list with logged warning |
 | Invalid Date | Throw IllegalArgumentException |
 | Empty Response | Return empty list (market may be closed) |
+| LOGOUT Response | KRX 세션 만료 - 한국 네트워크/VPN 필요 |
+
+## Network Requirements
+
+⚠️ **KRX API는 한국 네트워크에서만 접근 가능합니다.**
+
+- 해외에서 접속 시 "LOGOUT" 응답 반환
+- 통합 테스트 실행 시 한국 VPN 필요
+- 단위 테스트(MockWebServer)는 네트워크 제한 없음
+
+```bash
+# 단위 테스트 (네트워크 불필요)
+./gradlew test
+
+# 통합 테스트 (한국 네트워크 필요)
+./gradlew runIntegrationTest -PmainClass=com.krxkt.integration.EtfPortfolioTestKt
+```
 
 ## External Resources
 
