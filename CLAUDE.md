@@ -24,13 +24,21 @@ Android 앱에서 Python 런타임 없이 한국거래소(KRX) 시장 데이터�
 ## Build Commands
 
 ```bash
+# Windows (CMD/PowerShell)
+gradlew.bat build            # Full build
+gradlew.bat test             # Unit tests
+
+# Unix/macOS/Git Bash
 ./gradlew build              # Full build
 ./gradlew test               # Unit tests
-./gradlew lint               # Lint check
-./gradlew ktlintCheck        # Kotlin lint
-./gradlew assembleDebug      # Debug APK
-./gradlew installDebug       # Install to device
 ```
+
+| Command | Description |
+|---------|-------------|
+| `build` | Full build |
+| `test` | Unit tests (MockWebServer) |
+| `runIntegrationTest` | Integration test (한국 네트워크 필요) |
+| `runIntegrationTest -PmainClass=<class>` | 특정 테스트 클래스 실행 |
 
 ## Tech Stack
 
@@ -200,10 +208,12 @@ com.krxkt/
 
 ```bash
 # 단위 테스트 (네트워크 불필요)
-./gradlew test
+gradlew.bat test                    # Windows
+./gradlew test                      # Unix/macOS
 
 # 통합 테스트 (한국 네트워크 필요)
-./gradlew runIntegrationTest -PmainClass=com.krxkt.integration.EtfPortfolioTestKt
+gradlew.bat runIntegrationTest -PmainClass=com.krxkt.integration.EtfPortfolioTestKt   # Windows
+./gradlew runIntegrationTest -PmainClass=com.krxkt.integration.EtfPortfolioTestKt     # Unix/macOS
 ```
 
 ## External Resources
