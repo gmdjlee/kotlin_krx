@@ -19,14 +19,25 @@ object DateUtils {
             throw KrxError.InvalidDateError(date)
         }
 
-        // 기본적인 날짜 범위 검증
         val year = date.substring(0, 4).toIntOrNull() ?: throw KrxError.InvalidDateError(date)
         val month = date.substring(4, 6).toIntOrNull() ?: throw KrxError.InvalidDateError(date)
         val day = date.substring(6, 8).toIntOrNull() ?: throw KrxError.InvalidDateError(date)
 
         if (year < 1990 || year > 2100) throw KrxError.InvalidDateError(date)
         if (month < 1 || month > 12) throw KrxError.InvalidDateError(date)
-        if (day < 1 || day > 31) throw KrxError.InvalidDateError(date)
+
+        // Calendar-correct day validation per month
+        val maxDay = when (month) {
+            1, 3, 5, 7, 8, 10, 12 -> 31
+            4, 6, 9, 11 -> 30
+            2 -> if (isLeapYear(year)) 29 else 28
+            else -> 31
+        }
+        if (day < 1 || day > maxDay) throw KrxError.InvalidDateError(date)
+    }
+
+    private fun isLeapYear(year: Int): Boolean {
+        return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
     }
 
     /**

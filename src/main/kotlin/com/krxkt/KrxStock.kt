@@ -2,6 +2,7 @@ package com.krxkt
 
 import com.krxkt.api.KrxClient
 import com.krxkt.api.KrxEndpoints
+import com.krxkt.cache.TickerCache
 import com.krxkt.model.*
 import com.krxkt.parser.KrxJsonParser
 import com.krxkt.util.DateUtils
@@ -26,9 +27,11 @@ import com.krxkt.util.DateUtils
  * ```
  *
  * @param client HTTP 클라이언트 (테스트용 주입 가능)
+ * @param tickerCache ISIN 코드 캐시 (공유 가능)
  */
 class KrxStock(
-    private val client: KrxClient = KrxClient()
+    private val client: KrxClient = KrxClient(),
+    private val tickerCache: TickerCache = TickerCache()
 ) {
     /**
      * 전종목 OHLCV 조회
@@ -173,15 +176,27 @@ class KrxStock(
     }
 
     /**
-     * 종목코드로 ISIN 코드 조회
+     * 종목코드로 ISIN 코드 조회 (캐시 사용)
+     *
+     * 캐시에 ISIN이 있으면 즉시 반환, 없으면 전체 티커 리스트를
+     * 조회하여 캐시에 일괄 저장 후 반환.
      *
      * @param ticker 종목코드 (예: "005930")
      * @param date 기준 날짜
      * @return ISIN 코드 (예: "KR7005930003"), 없으면 null
      */
     internal suspend fun getIsinCode(ticker: String, date: String): String? {
+        // 캐시 히트
+        tickerCache.getStockIsin(ticker)?.let { return it }
+
+        // 캐시 미스: 전체 티커 리스트 조회 후 일괄 캐시
         val tickerList = getTickerList(date, Market.ALL)
-        return tickerList.find { it.ticker == ticker }?.isinCode
+        val tickerToIsin = tickerList
+            .filter { it.isinCode.isNotEmpty() }
+            .associate { it.ticker to it.isinCode }
+        tickerCache.putAllStockIsins(tickerToIsin)
+
+        return tickerToIsin[ticker]
     }
 
     // ============================================================

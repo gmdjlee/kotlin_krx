@@ -2,6 +2,7 @@ package com.krxkt
 
 import com.krxkt.api.KrxClient
 import com.krxkt.api.KrxEndpoints
+import com.krxkt.cache.TickerCache
 import com.krxkt.model.EtfInfo
 import com.krxkt.model.EtfOhlcvHistory
 import com.krxkt.model.EtfPortfolio
@@ -29,9 +30,11 @@ import com.krxkt.util.DateUtils
  * ```
  *
  * @param client HTTP 클라이언트 (테스트용 주입 가능)
+ * @param tickerCache ISIN 코드 캐시 (공유 가능)
  */
 class KrxEtf(
-    private val client: KrxClient = KrxClient()
+    private val client: KrxClient = KrxClient(),
+    private val tickerCache: TickerCache = TickerCache()
 ) {
     /**
      * 전종목 ETF 시세 조회
@@ -152,15 +155,27 @@ class KrxEtf(
     }
 
     /**
-     * 종목코드로 ISIN 코드 조회
+     * 종목코드로 ISIN 코드 조회 (캐시 사용)
+     *
+     * 캐시에 ISIN이 있으면 즉시 반환, 없으면 전체 ETF 티커 리스트를
+     * 조회하여 캐시에 일괄 저장 후 반환.
      *
      * @param ticker ETF 종목코드 (예: "069500")
      * @param date 기준 날짜
      * @return ISIN 코드 (예: "KR7069500007"), 없으면 null
      */
     private suspend fun getIsinCode(ticker: String, date: String): String? {
+        // 캐시 히트
+        tickerCache.getEtfIsin(ticker)?.let { return it }
+
+        // 캐시 미스: 전체 ETF 티커 리스트 조회 후 일괄 캐시
         val tickerList = getEtfTickerList(date)
-        return tickerList.find { it.ticker == ticker }?.isinCode
+        val tickerToIsin = tickerList
+            .filter { it.isinCode.isNotEmpty() }
+            .associate { it.ticker to it.isinCode }
+        tickerCache.putAllEtfIsins(tickerToIsin)
+
+        return tickerToIsin[ticker]
     }
 
     /**

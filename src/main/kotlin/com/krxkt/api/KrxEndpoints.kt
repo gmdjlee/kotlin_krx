@@ -13,10 +13,11 @@ object KrxEndpoints {
      * 일부 환경에서는 접근이 제한될 수 있음.
      * 프록시 또는 VPN 사용 시 우회 가능.
      */
-    const val BASE_URL = "http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd"
+    const val BASE_URL = "https://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd"
 
-    /** HTTPS URL (일부 환경에서 필요) */
-    const val BASE_URL_HTTPS = "https://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd"
+    /** HTTP URL (레거시 호환용, 보안상 HTTPS 권장) */
+    @Deprecated("Use BASE_URL (HTTPS) instead", replaceWith = ReplaceWith("BASE_URL"))
+    const val BASE_URL_HTTP = "http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd"
 
     /** 필수 Referer 헤더 (없으면 LOGOUT 응답) */
     const val REFERER = "https://data.krx.co.kr/contents/MDC/MDI/outerLoader/index.cmd"

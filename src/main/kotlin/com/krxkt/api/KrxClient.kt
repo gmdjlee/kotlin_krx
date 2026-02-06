@@ -36,6 +36,9 @@ class KrxClient(
         private const val MAX_RETRIES = 3
         private val RETRY_DELAYS_MS = listOf(1000L, 2000L, 4000L)
 
+        /** Maximum response body size: 50MB (KRX full-market responses can be large) */
+        private const val MAX_RESPONSE_SIZE_BYTES = 50L * 1024 * 1024
+
         /**
          * 기본 OkHttpClient 생성
          * - 연결 타임아웃: 30초
@@ -107,8 +110,20 @@ class KrxClient(
             if (!response.isSuccessful) {
                 throw IOException("Unexpected response code: ${response.code}")
             }
+
+            // Check Content-Length header for early rejection of oversized responses
+            val contentLength = response.body?.contentLength() ?: -1L
+            if (contentLength > MAX_RESPONSE_SIZE_BYTES) {
+                throw IOException("Response too large: $contentLength bytes exceeds limit of $MAX_RESPONSE_SIZE_BYTES bytes")
+            }
+
             val body = response.body?.string()
                 ?: throw IOException("Empty response body")
+
+            // Post-read size check (Content-Length may be absent with chunked encoding)
+            if (body.length > MAX_RESPONSE_SIZE_BYTES) {
+                throw IOException("Response too large: ${body.length} bytes exceeds limit of $MAX_RESPONSE_SIZE_BYTES bytes")
+            }
 
             // KRX API returns "LOGOUT" when session is invalid
             if (body.trim() == "LOGOUT") {
