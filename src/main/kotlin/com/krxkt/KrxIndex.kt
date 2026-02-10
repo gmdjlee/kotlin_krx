@@ -58,14 +58,15 @@ class KrxIndex(
         DateUtils.validateDateRange(startDate, endDate)
         require(ticker.length >= 2) { "Invalid index ticker: $ticker" }
 
-        // 티커 파싱: "1028" → indTpCd="1", idxIndCd="028"
-        val indTpCd = ticker.substring(0, 1)
-        val idxIndCd = ticker.substring(1).padStart(3, '0')
+        // 티커 파싱: "1028" → indIdx="1", indIdx2="028"
+        // KRX MDCSTAT00301 파라미터: indIdx=시장구분, indIdx2=지수코드
+        val indIdx = ticker.substring(0, 1)
+        val indIdx2 = ticker.substring(1).padStart(3, '0')
 
         val params = mapOf(
             "bld" to KrxEndpoints.Bld.INDEX_OHLCV,
-            "indTpCd" to indTpCd,
-            "idxIndCd" to idxIndCd,
+            "indIdx" to indIdx,
+            "indIdx2" to indIdx2,
             "strtDd" to startDate,
             "endDd" to endDate
         )

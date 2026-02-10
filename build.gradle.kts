@@ -1,6 +1,6 @@
 plugins {
     kotlin("jvm") version "1.9.22"
-    application
+    `java-library`
 }
 
 group = "com.krxkt"
@@ -12,13 +12,13 @@ repositories {
 
 dependencies {
     // HTTP Client
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    api("com.squareup.okhttp3:okhttp:4.12.0")
 
     // JSON Parsing
     implementation("com.google.code.gson:gson:2.10.1")
 
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
 
     // Date/Time
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
@@ -48,8 +48,15 @@ tasks.register<Test>("integrationTest") {
     }
 }
 
-kotlin {
-    jvmToolchain(21)
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }
 
 // Run integration test main classes

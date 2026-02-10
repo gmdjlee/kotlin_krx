@@ -269,7 +269,9 @@ class KrxStock(
             "endDd" to endDate,
             "isuCd" to isinCode,
             "trdVolVal" to valueType.code,
-            "askBid" to askBidType.code
+            "askBid" to askBidType.code,
+            "inqTpCd" to "2",
+            "detailView" to "1"
         )
 
         val response = client.post(params)

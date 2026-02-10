@@ -11,7 +11,7 @@ import com.krxkt.parser.KrxJsonParser
  * - OPNPRC_IDX → open (시가지수)
  * - HGPRC_IDX → high (고가지수)
  * - LWPRC_IDX → low (저가지수)
- * - CLPR_IDX → close (종가지수)
+ * - CLSPRC_IDX → close (종가지수)
  * - ACC_TRDVOL → volume (누적거래량)
  * - ACC_TRDVAL → tradingValue (누적거래대금, 백만원)
  * - FLUC_TP_CD → changeType (1: 상승, 2: 하락, 3: 보합)
@@ -56,7 +56,7 @@ data class IndexOhlcv(
                     open = KrxJsonParser.parseDouble(json.get("OPNPRC_IDX")?.asString) ?: 0.0,
                     high = KrxJsonParser.parseDouble(json.get("HGPRC_IDX")?.asString) ?: 0.0,
                     low = KrxJsonParser.parseDouble(json.get("LWPRC_IDX")?.asString) ?: 0.0,
-                    close = KrxJsonParser.parseDouble(json.get("CLPR_IDX")?.asString) ?: 0.0,
+                    close = KrxJsonParser.parseDouble(json.get("CLSPRC_IDX")?.asString) ?: 0.0,
                     volume = KrxJsonParser.parseLong(json.get("ACC_TRDVOL")?.asString) ?: 0L,
                     tradingValue = KrxJsonParser.parseLong(json.get("ACC_TRDVAL")?.asString) ?: 0L,
                     changeType = json.get("FLUC_TP_CD")?.asString?.toIntOrNull(),
