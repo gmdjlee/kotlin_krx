@@ -1,14 +1,10 @@
 plugins {
-    kotlin("jvm") version "1.9.22"
+    kotlin("jvm")
     `java-library`
 }
 
 group = "com.krxkt"
 version = "1.0.0-SNAPSHOT"
-
-repositories {
-    mavenCentral()
-}
 
 dependencies {
     // HTTP Client
