@@ -257,7 +257,8 @@ class KrxIndex(
      * pykrx: get_nearest_business_day_in_a_week(date, prev)
      *
      * 지정일이 영업일이면 그대로 반환, 아니면 최대 7일 전/후로 탐색.
-     * KOSPI 지수 OHLCV를 조회하여 영업일 여부를 판단.
+     * KOSPI 지수 OHLCV 기간 조회(MDCSTAT00301)를 사용하여
+     * 실제 거래일만 포함된 결과에서 가장 가까운 날짜를 선택.
      *
      * @param date 기준 날짜 (yyyyMMdd)
      * @param prev true면 이전 영업일, false면 다음 영업일 탐색
@@ -273,23 +274,34 @@ class KrxIndex(
         val fmt = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd")
         val baseDate = java.time.LocalDate.parse(date, fmt)
 
-        // 최대 7일 범위 탐색
-        for (offset in 0..7) {
-            val candidateDate = if (prev) {
-                baseDate.minusDays(offset.toLong())
-            } else {
-                baseDate.plusDays(offset.toLong())
-            }
-            val candidateStr = candidateDate.format(fmt)
-
-            // KOSPI 지수 OHLCV로 영업일 여부 판단
-            val ohlcv = getIndexOhlcv(candidateStr, IndexMarket.KOSPI)
-            if (ohlcv.isNotEmpty()) {
-                return candidateStr
-            }
+        // 7일 범위를 한 번의 API 호출로 조회 (실제 거래일만 반환)
+        val rangeStart: String
+        val rangeEnd: String
+        if (prev) {
+            rangeStart = baseDate.minusDays(7).format(fmt)
+            rangeEnd = date
+        } else {
+            rangeStart = date
+            rangeEnd = baseDate.plusDays(7).format(fmt)
         }
 
-        throw IllegalStateException("No business day found within 7 days of $date")
+        val tradingDays = getOhlcvByTicker(rangeStart, rangeEnd, TICKER_KOSPI)
+            .map { it.date }
+            .sorted()
+
+        if (tradingDays.isEmpty()) {
+            throw IllegalStateException("No business day found within 7 days of $date")
+        }
+
+        return if (prev) {
+            // 기준일 이하 중 가장 최근 날짜
+            tradingDays.lastOrNull { it <= date }
+                ?: throw IllegalStateException("No previous business day found within 7 days of $date")
+        } else {
+            // 기준일 이상 중 가장 빠른 날짜
+            tradingDays.firstOrNull { it >= date }
+                ?: throw IllegalStateException("No next business day found within 7 days of $date")
+        }
     }
 
     /**

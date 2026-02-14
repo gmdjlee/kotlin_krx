@@ -210,14 +210,18 @@ class KrxIndexTest {
 
     // ====================================================
     // getNearestBusinessDay (최근 영업일)
+    // Uses getOhlcvByTicker (MDCSTAT00301) - returns only actual trading dates
     // ====================================================
 
     @Test
     fun `getNearestBusinessDay should return same date if business day`() = runTest {
+        // prev=true → queries range [date-7, date] via getOhlcvByTicker
+        // Response contains 20210122 as a trading day
         val responseJson = """
             {
                 "OutBlock_1": [
-                    {"IDX_NM": "코스피", "CLSPRC_IDX": "3,055.28", "OPNPRC_IDX": "3,031.68", "HGPRC_IDX": "3,062.48", "LWPRC_IDX": "3,031.68", "ACC_TRDVOL": "637,384", "ACC_TRDVAL": "12,534,397", "MKTCAP": "100"}
+                    {"TRD_DD": "2021/01/21", "OPNPRC_IDX": "3,100.00", "HGPRC_IDX": "3,120.00", "LWPRC_IDX": "3,080.00", "CLSPRC_IDX": "3,110.00", "ACC_TRDVOL": "500,000", "ACC_TRDVAL": "10,000,000"},
+                    {"TRD_DD": "2021/01/22", "OPNPRC_IDX": "3,031.68", "HGPRC_IDX": "3,062.48", "LWPRC_IDX": "3,031.68", "CLSPRC_IDX": "3,055.28", "ACC_TRDVOL": "637,384", "ACC_TRDVAL": "12,534,397"}
                 ]
             }
         """.trimIndent()
@@ -230,17 +234,21 @@ class KrxIndexTest {
 
     @Test
     fun `getNearestBusinessDay should find previous business day on holiday`() = runTest {
-        // Saturday 20210123 → empty
-        mockServer.enqueue(MockResponse().setBody("""{"OutBlock_1": []}""").setResponseCode(200))
-        // Friday 20210122 → has data
-        val dayResponse = """
+        // prev=true, date=20210123 (Saturday) → queries [20210116, 20210123]
+        // Response: only weekday trading dates (no Sat/Sun entries)
+        val responseJson = """
             {
                 "OutBlock_1": [
-                    {"IDX_NM": "코스피", "CLSPRC_IDX": "3,055.28", "OPNPRC_IDX": "3,031.68", "HGPRC_IDX": "3,062.48", "LWPRC_IDX": "3,031.68", "ACC_TRDVOL": "637,384", "ACC_TRDVAL": "12,534,397", "MKTCAP": "100"}
+                    {"TRD_DD": "2021/01/18", "OPNPRC_IDX": "3,000.00", "HGPRC_IDX": "3,020.00", "LWPRC_IDX": "2,990.00", "CLSPRC_IDX": "3,010.00", "ACC_TRDVOL": "400,000", "ACC_TRDVAL": "8,000,000"},
+                    {"TRD_DD": "2021/01/19", "OPNPRC_IDX": "3,010.00", "HGPRC_IDX": "3,030.00", "LWPRC_IDX": "3,000.00", "CLSPRC_IDX": "3,020.00", "ACC_TRDVOL": "420,000", "ACC_TRDVAL": "8,500,000"},
+                    {"TRD_DD": "2021/01/20", "OPNPRC_IDX": "3,020.00", "HGPRC_IDX": "3,050.00", "LWPRC_IDX": "3,010.00", "CLSPRC_IDX": "3,040.00", "ACC_TRDVOL": "450,000", "ACC_TRDVAL": "9,000,000"},
+                    {"TRD_DD": "2021/01/21", "OPNPRC_IDX": "3,040.00", "HGPRC_IDX": "3,060.00", "LWPRC_IDX": "3,030.00", "CLSPRC_IDX": "3,050.00", "ACC_TRDVOL": "430,000", "ACC_TRDVAL": "8,700,000"},
+                    {"TRD_DD": "2021/01/22", "OPNPRC_IDX": "3,031.68", "HGPRC_IDX": "3,062.48", "LWPRC_IDX": "3,031.68", "CLSPRC_IDX": "3,055.28", "ACC_TRDVOL": "637,384", "ACC_TRDVAL": "12,534,397"}
                 ]
             }
         """.trimIndent()
-        mockServer.enqueue(MockResponse().setBody(dayResponse).setResponseCode(200))
+
+        mockServer.enqueue(MockResponse().setBody(responseJson).setResponseCode(200))
 
         val result = krxIndex.getNearestBusinessDay("20210123", prev = true)
         assertEquals("20210122", result)
@@ -248,22 +256,30 @@ class KrxIndexTest {
 
     @Test
     fun `getNearestBusinessDay should find next business day when prev is false`() = runTest {
-        // Saturday 20210123 → empty
-        mockServer.enqueue(MockResponse().setBody("""{"OutBlock_1": []}""").setResponseCode(200))
-        // Sunday 20210124 → empty
-        mockServer.enqueue(MockResponse().setBody("""{"OutBlock_1": []}""").setResponseCode(200))
-        // Monday 20210125 → has data
-        val dayResponse = """
+        // prev=false, date=20210123 (Saturday) → queries [20210123, 20210130]
+        // Response: Monday 20210125 is the first trading day
+        val responseJson = """
             {
                 "OutBlock_1": [
-                    {"IDX_NM": "코스피", "CLSPRC_IDX": "3,100.00", "OPNPRC_IDX": "3,080.00", "HGPRC_IDX": "3,120.00", "LWPRC_IDX": "3,075.00", "ACC_TRDVOL": "500,000", "ACC_TRDVAL": "10,000,000", "MKTCAP": "100"}
+                    {"TRD_DD": "2021/01/25", "OPNPRC_IDX": "3,080.00", "HGPRC_IDX": "3,120.00", "LWPRC_IDX": "3,075.00", "CLSPRC_IDX": "3,100.00", "ACC_TRDVOL": "500,000", "ACC_TRDVAL": "10,000,000"},
+                    {"TRD_DD": "2021/01/26", "OPNPRC_IDX": "3,100.00", "HGPRC_IDX": "3,130.00", "LWPRC_IDX": "3,090.00", "CLSPRC_IDX": "3,120.00", "ACC_TRDVOL": "480,000", "ACC_TRDVAL": "9,500,000"}
                 ]
             }
         """.trimIndent()
-        mockServer.enqueue(MockResponse().setBody(dayResponse).setResponseCode(200))
+
+        mockServer.enqueue(MockResponse().setBody(responseJson).setResponseCode(200))
 
         val result = krxIndex.getNearestBusinessDay("20210123", prev = false)
         assertEquals("20210125", result)
+    }
+
+    @Test
+    fun `getNearestBusinessDay should throw when no business day in range`() = runTest {
+        mockServer.enqueue(MockResponse().setBody("""{"OutBlock_1": []}""").setResponseCode(200))
+
+        assertFailsWith<IllegalStateException> {
+            krxIndex.getNearestBusinessDay("20210123", prev = true)
+        }
     }
 
     @Test
