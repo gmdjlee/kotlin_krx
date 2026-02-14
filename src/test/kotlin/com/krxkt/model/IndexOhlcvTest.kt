@@ -19,7 +19,7 @@ class IndexOhlcvTest {
                 "OPNPRC_IDX": "3,031.68",
                 "HGPRC_IDX": "3,062.48",
                 "LWPRC_IDX": "3,031.68",
-                "CLPR_IDX": "3,055.28",
+                "CLSPRC_IDX": "3,055.28",
                 "ACC_TRDVOL": "637,384",
                 "ACC_TRDVAL": "12,534,397",
                 "FLUC_TP_CD": "1",
@@ -52,7 +52,7 @@ class IndexOhlcvTest {
                 "OPNPRC_IDX": "2,900.00",
                 "HGPRC_IDX": "2,920.00",
                 "LWPRC_IDX": "2,850.00",
-                "CLPR_IDX": "2,860.00",
+                "CLSPRC_IDX": "2,860.00",
                 "ACC_TRDVOL": "500,000",
                 "ACC_TRDVAL": "10,000,000",
                 "FLUC_TP_CD": "2",
@@ -78,7 +78,7 @@ class IndexOhlcvTest {
                 "OPNPRC_IDX": "2,900.00",
                 "HGPRC_IDX": "2,900.00",
                 "LWPRC_IDX": "2,900.00",
-                "CLPR_IDX": "2,900.00",
+                "CLSPRC_IDX": "2,900.00",
                 "ACC_TRDVOL": "100",
                 "ACC_TRDVAL": "290,000",
                 "FLUC_TP_CD": "3",
@@ -99,7 +99,7 @@ class IndexOhlcvTest {
         val json = """
             {
                 "OPNPRC_IDX": "3,031.68",
-                "CLPR_IDX": "3,055.28"
+                "CLSPRC_IDX": "3,055.28"
             }
         """.trimIndent()
 
@@ -117,7 +117,7 @@ class IndexOhlcvTest {
                 "OPNPRC_IDX": "3,031.68",
                 "HGPRC_IDX": "3,062.48",
                 "LWPRC_IDX": "3,031.68",
-                "CLPR_IDX": "3,055.28",
+                "CLSPRC_IDX": "3,055.28",
                 "ACC_TRDVOL": "637,384",
                 "ACC_TRDVAL": "12,534,397"
             }
@@ -140,7 +140,7 @@ class IndexOhlcvTest {
                 "OPNPRC_IDX": "-",
                 "HGPRC_IDX": "",
                 "LWPRC_IDX": "0",
-                "CLPR_IDX": "0",
+                "CLSPRC_IDX": "0",
                 "ACC_TRDVOL": "-",
                 "ACC_TRDVAL": "",
                 "FLUC_TP_CD": "",

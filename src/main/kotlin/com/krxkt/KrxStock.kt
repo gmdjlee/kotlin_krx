@@ -33,6 +33,11 @@ class KrxStock(
     private val client: KrxClient = KrxClient(),
     private val tickerCache: TickerCache = TickerCache()
 ) {
+    companion object {
+        /** KRX API 기간 조회 최대 허용 일수 (INVALIDPERIOD2 방지) */
+        private const val MAX_PERIOD_DAYS = 365L
+        private val DATE_FMT = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd")
+    }
     /**
      * 전종목 OHLCV 조회
      *
@@ -81,17 +86,19 @@ class KrxStock(
         val isinCode = getIsinCode(ticker, endDate)
             ?: return emptyList()
 
-        val params = mapOf(
-            "bld" to KrxEndpoints.Bld.STOCK_OHLCV_BY_TICKER,
-            "isuCd" to isinCode,
-            "strtDd" to startDate,
-            "endDd" to endDate
-        )
+        return fetchByDateChunks(startDate, endDate) { chunkStart, chunkEnd ->
+            val params = mapOf(
+                "bld" to KrxEndpoints.Bld.STOCK_OHLCV_BY_TICKER,
+                "isuCd" to isinCode,
+                "strtDd" to chunkStart,
+                "endDd" to chunkEnd,
+                "adjStkPrc" to "2"  // 수정주가 적용 (pykrx 동일)
+            )
 
-        val response = client.post(params)
-        val jsonArray = KrxJsonParser.parseOutBlock(response)
-
-        return jsonArray.mapNotNull { StockOhlcvHistory.fromJson(it) }
+            val response = client.post(params)
+            val jsonArray = KrxJsonParser.parseOutBlock(response)
+            jsonArray.mapNotNull { StockOhlcvHistory.fromJson(it) }
+        }
     }
 
     /**
@@ -263,21 +270,22 @@ class KrxStock(
         val isinCode = getIsinCode(ticker, endDate)
             ?: return emptyList()
 
-        val params = mapOf(
-            "bld" to KrxEndpoints.Bld.INVESTOR_TRADING_TICKER_DAILY,
-            "strtDd" to startDate,
-            "endDd" to endDate,
-            "isuCd" to isinCode,
-            "trdVolVal" to valueType.code,
-            "askBid" to askBidType.code,
-            "inqTpCd" to "2",
-            "detailView" to "1"
-        )
+        return fetchByDateChunks(startDate, endDate) { chunkStart, chunkEnd ->
+            val params = mapOf(
+                "bld" to KrxEndpoints.Bld.INVESTOR_TRADING_TICKER_DAILY,
+                "strtDd" to chunkStart,
+                "endDd" to chunkEnd,
+                "isuCd" to isinCode,
+                "trdVolVal" to valueType.code,
+                "askBid" to askBidType.code,
+                "inqTpCd" to "2",
+                "detailView" to "1"
+            )
 
-        val response = client.post(params)
-        val jsonArray = KrxJsonParser.parseOutBlock(response)
-
-        return jsonArray.mapNotNull { InvestorTrading.fromJson(it) }
+            val response = client.post(params)
+            val jsonArray = KrxJsonParser.parseOutBlock(response)
+            jsonArray.mapNotNull { InvestorTrading.fromJson(it) }
+        }
     }
 
     // ============================================================
@@ -402,6 +410,36 @@ class KrxStock(
         val jsonArray = KrxJsonParser.parseOutBlock(response)
 
         return jsonArray.mapNotNull { ShortBalanceHistory.fromJson(it) }
+    }
+
+    /**
+     * 큰 날짜 범위를 MAX_PERIOD_DAYS 단위로 분할하여 조회
+     *
+     * KRX API는 기간 조회 시 최대 허용 일수가 있으며 (약 1년),
+     * 초과 시 INVALIDPERIOD2 에러(HTTP 400)를 반환한다.
+     * 이 메서드는 큰 범위를 자동으로 분할하여 결과를 합친다.
+     */
+    private suspend fun <T> fetchByDateChunks(
+        startDate: String,
+        endDate: String,
+        fetcher: suspend (chunkStart: String, chunkEnd: String) -> List<T>
+    ): List<T> {
+        val start = java.time.LocalDate.parse(startDate, DATE_FMT)
+        val end = java.time.LocalDate.parse(endDate, DATE_FMT)
+        val totalDays = java.time.temporal.ChronoUnit.DAYS.between(start, end)
+
+        if (totalDays <= MAX_PERIOD_DAYS) {
+            return fetcher(startDate, endDate)
+        }
+
+        val results = mutableListOf<T>()
+        var chunkStart = start
+        while (!chunkStart.isAfter(end)) {
+            val chunkEnd = minOf(chunkStart.plusDays(MAX_PERIOD_DAYS), end)
+            results.addAll(fetcher(chunkStart.format(DATE_FMT), chunkEnd.format(DATE_FMT)))
+            chunkStart = chunkEnd.plusDays(1)
+        }
+        return results
     }
 
     /**

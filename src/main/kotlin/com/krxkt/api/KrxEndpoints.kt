@@ -63,8 +63,11 @@ object KrxEndpoints {
         /** 지수 시세 (OHLCV) */
         const val INDEX_OHLCV = "dbms/MDC/STAT/standard/MDCSTAT00301"
 
-        /** 지수 리스트 */
+        /** 지수 리스트 / 전체지수 시세 (특정일 전종목) */
         const val INDEX_LIST = "dbms/MDC/STAT/standard/MDCSTAT00101"
+
+        /** 지수 구성종목 (Portfolio Deposit File) */
+        const val INDEX_PORTFOLIO = "dbms/MDC/STAT/standard/MDCSTAT00601"
 
         // === Investor Trading ===
         /** 투자자별 거래실적 - 전체시장 기간합계 */

@@ -93,6 +93,8 @@ class KrxClient(
             }
         }.build()
 
+        val bld = params["bld"] ?: "unknown"
+
         val request = Request.Builder()
             .url(baseUrl)
             .post(formBody)
@@ -108,7 +110,8 @@ class KrxClient(
 
         okHttpClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                throw IOException("Unexpected response code: ${response.code}")
+                val errorBody = try { response.body?.string()?.take(500) } catch (_: Exception) { null }
+                throw IOException("Unexpected response code: ${response.code} for bld=$bld, params=${params.keys}, body=$errorBody")
             }
 
             // Check Content-Length header for early rejection of oversized responses

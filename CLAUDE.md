@@ -80,6 +80,7 @@ com.krxkt/
 | Phase 2 | ✅ Done | Stock Data APIs (getMarketOhlcv, getMarketCap, getMarketFundamental) |
 | Phase 3 | ✅ Done | ETF & Index APIs (KrxEtf, KrxIndex) |
 | Phase 4 | ✅ Done | Advanced Features (Investor Trading, Short Selling) |
+| Phase 5 | ✅ Done | Index Extensions & Business Days (Portfolio, All-Index OHLCV, Business Days) |
 
 ---
 
@@ -156,7 +157,8 @@ com.krxkt/
 | ETF Ticker List | `dbms/MDC/STAT/standard/MDCSTAT04601` |
 | ETF Portfolio | `dbms/MDC/STAT/standard/MDCSTAT05001` |
 | Index OHLCV | `dbms/MDC/STAT/standard/MDCSTAT00301` |
-| Index List | `dbms/MDC/STAT/standard/MDCSTAT00101` |
+| Index List / All-Index OHLCV | `dbms/MDC/STAT/standard/MDCSTAT00101` |
+| Index Portfolio | `dbms/MDC/STAT/standard/MDCSTAT00601` |
 | Investor Trading (Market) | `dbms/MDC/STAT/standard/MDCSTAT02203` |
 | Investor Trading (Ticker) | `dbms/MDC/STAT/standard/MDCSTAT02303` |
 | Short Selling (All) | `dbms/MDC/STAT/srt/MDCSTAT30101` |
@@ -185,6 +187,11 @@ com.krxkt/
 | `stock.get_market_trading_value_by_date(..., ticker)` | `krxStock.getTradingByInvestor(...)` |
 | `stock.get_shorting_volume_by_ticker(...)` | `krxStock.getShortSellingByTicker(...)` |
 | `stock.get_shorting_balance_by_ticker(...)` | `krxStock.getShortBalanceByTicker(...)` |
+| `index.get_index_portfolio_deposit_file(ticker, date)` | `krxIndex.getIndexPortfolio(date, ticker)` |
+| `index.get_index_ohlcv_by_ticker(date, market)` | `krxIndex.getIndexOhlcv(date, market)` |
+| `get_nearest_business_day_in_a_week(date, prev)` | `krxIndex.getNearestBusinessDay(date, prev)` |
+| `get_previous_business_days(fromdate, todate)` | `krxIndex.getBusinessDays(start, end)` |
+| `get_previous_business_days(year, month)` | `krxIndex.getBusinessDaysByMonth(year, month)` |
 
 ---
 

@@ -81,15 +81,19 @@ data class IndexInfo(
 /**
  * 지수 시장 타입
  */
-enum class IndexMarket(val code: String) {
+enum class IndexMarket(
+    val code: String,
+    /** MDCSTAT00101 전종목 시세 조회용 코드 (idxIndMidclssCd) */
+    val krxCode: String
+) {
     /** 전체 */
-    ALL(""),
+    ALL("", "01"),
     /** KOSPI 계열 */
-    KOSPI("1"),
+    KOSPI("1", "02"),
     /** KOSDAQ 계열 */
-    KOSDAQ("2"),
+    KOSDAQ("2", "03"),
     /** 파생상품 지수 */
-    DERIVATIVES("3"),
+    DERIVATIVES("3", "04"),
     /** 테마 지수 */
-    THEME("4")
+    THEME("4", "04")
 }
