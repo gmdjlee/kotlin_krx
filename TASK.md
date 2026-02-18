@@ -1,26 +1,19 @@
-# TASK.md — Missing pykrx Functions Migration
+# TASK.md — KrxKt Project
 
-## Phase 1: Analysis (iterations 1-2)
-- [x] **M-001** Read pykrx source for 5 target functions: get_index_portfolio_deposit_file, get_index_ohlcv, get_index_ohlcv_by_ticker, get_nearest_business_day_in_a_week, get_previous_business_days
-- [x] **M-002** Document each function's signature, logic, API endpoints, return types → write PLAN.md
-- [x] **M-003** Architect-Reviewer approves PLAN.md before implementation
+## Completed Phases
 
-## Phase 2: Implementation (iterations 3-7)
-- [x] **M-004** Implement get_index_portfolio_deposit_file in kotlin_krx module
-- [x] **M-005** Implement get_index_ohlcv + get_index_ohlcv_by_ticker (related, batch together)
-- [x] **M-006** Implement get_nearest_business_day_in_a_week + get_previous_business_days (date utils, batch)
-- [x] **M-007** Integrate into existing Repository/UseCase layers, update Hilt DI
+- [x] **Phase 1** Core Infrastructure (KrxClient, KrxJsonParser, KrxEndpoints)
+- [x] **Phase 2** Stock Data APIs (getMarketOhlcv, getMarketCap, getMarketFundamental)
+- [x] **Phase 3** ETF & Index APIs (KrxEtf, KrxIndex)
+- [x] **Phase 4** Advanced Features (Investor Trading, Short Selling)
+- [x] **Phase 5** Index Extensions & Business Days
 
-## Phase 3: Verification (iterations 8-10)
-- [x] **M-008** Unit tests for all 5 functions (input/output parity with pykrx)
-- [x] **M-009** Build: ./gradlew assembleDebug passes
-- [x] **M-010** Update CLAUDE.md + generate MIGRATION_REPORT.md
+## Recent Fixes
 
-## Target Functions
-| # | pykrx function | module | notes |
-|---|---------------|--------|-------|
-| 1 | get_index_portfolio_deposit_file | index | 지수 구성종목 |
-| 2 | get_index_ohlcv | index | 지수 OHLCV |
-| 3 | get_index_ohlcv_by_ticker | index | 종목별 지수 OHLCV |
-| 4 | get_nearest_business_day_in_a_week | util | 최근 영업일 |
-| 5 | get_previous_business_days | util | 이전 영업일 목록 |
+- [x] fix: MARKET_CAP BLD MDCSTAT01602 → MDCSTAT01501 (pykrx 동일 엔드포인트로 수정)
+- [x] fix: getNearestBusinessDay 공휴일 날짜 반환 오류
+- [x] fix: Investor Trading / Index 엔드포인트 파라미터 수정
+
+## Backlog
+
+(none)
