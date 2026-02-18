@@ -37,8 +37,8 @@ object KrxEndpoints {
         /** 개별종목 시세 추이 (기간 조회) */
         const val STOCK_OHLCV_BY_TICKER = "dbms/MDC/STAT/standard/MDCSTAT01701"
 
-        /** 시가총액 */
-        const val MARKET_CAP = "dbms/MDC/STAT/standard/MDCSTAT01602"
+        /** 시가총액 (전종목시세 응답에 MKTCAP, LIST_SHRS 포함) */
+        const val MARKET_CAP = "dbms/MDC/STAT/standard/MDCSTAT01501"
 
         /** 투자지표 (PER, PBR, EPS, BPS, DPS, 배당수익률) */
         const val FUNDAMENTAL = "dbms/MDC/STAT/standard/MDCSTAT03501"
