@@ -62,7 +62,9 @@ com.krxkt/
 │   ├── MarketCap.kt
 │   ├── StockFundamental.kt
 │   ├── EtfPrice.kt
-│   └── InvestorTrading.kt
+│   ├── InvestorTrading.kt
+│   ├── DerivativeIndex.kt
+│   └── OptionVolume.kt
 ├── parser/                       # Response parsers
 │   └── KrxJsonParser.kt          # JSON parsing (comma removal)
 ├── cache/                        # Caching layer
@@ -81,6 +83,7 @@ com.krxkt/
 | Phase 3 | ✅ Done | ETF & Index APIs (KrxEtf, KrxIndex) |
 | Phase 4 | ✅ Done | Advanced Features (Investor Trading, Short Selling) |
 | Phase 5 | ✅ Done | Index Extensions & Business Days (Portfolio, All-Index OHLCV, Business Days) |
+| Phase 6 | ✅ Done | Derivative APIs (VKOSPI, Bond Index, Option Volume) |
 
 ---
 
@@ -92,11 +95,12 @@ com.krxkt/
 - 숫자 파싱 시 쉼표 제거 처리 필수: `"82,200"` → `82200L`
 
 ### KRX API 패턴
-- Base URL: `http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd`
+- Base URL: `https://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd`
 - Method: POST (application/x-www-form-urlencoded)
-- Referer 헤더 필수
-- 응답 구조: JSON → `OutBlock_1` 배열에 데이터 행 포함
+- Referer 헤더 필수 (outerLoader — 모든 엔드포인트에서 동작)
+- 응답 구조: JSON → `OutBlock_1`, `block1`, 또는 `output` 배열에 데이터 행 포함
 - 날짜 형식: `yyyyMMdd` (예: `20210122`)
+- CookieJar로 세션 쿠키 자동 관리
 
 ### 테스트 기준
 - 기준 날짜: `20210122` (과거 안정 데이터)
@@ -149,7 +153,7 @@ com.krxkt/
 |----------|-----------|
 | All Stocks OHLCV | `dbms/MDC/STAT/standard/MDCSTAT01501` |
 | Stock History | `dbms/MDC/STAT/standard/MDCSTAT01701` |
-| Market Cap | `dbms/MDC/STAT/standard/MDCSTAT01602` |
+| Market Cap | `dbms/MDC/STAT/standard/MDCSTAT01501` |
 | Fundamentals | `dbms/MDC/STAT/standard/MDCSTAT03501` |
 | Ticker List | `dbms/MDC/STAT/standard/MDCSTAT01901` |
 | ETF Price | `dbms/MDC/STAT/standard/MDCSTAT04301` |
@@ -161,6 +165,8 @@ com.krxkt/
 | Index Portfolio | `dbms/MDC/STAT/standard/MDCSTAT00601` |
 | Investor Trading (Market) | `dbms/MDC/STAT/standard/MDCSTAT02203` |
 | Investor Trading (Ticker) | `dbms/MDC/STAT/standard/MDCSTAT02303` |
+| Derivative Index (VKOSPI, Bond) | `dbms/MDC/STAT/standard/MDCSTAT01201` |
+| Option Trading Volume | `dbms/MDC/STAT/standard/MDCSTAT13102` |
 | Short Selling (All) | `dbms/MDC/STAT/srt/MDCSTAT30101` |
 | Short Selling (Ticker) | `dbms/MDC/STAT/srt/MDCSTAT30102` |
 | Short Balance (All) | `dbms/MDC/STAT/srt/MDCSTAT30501` |
@@ -192,6 +198,11 @@ com.krxkt/
 | `get_nearest_business_day_in_a_week(date, prev)` | `krxIndex.getNearestBusinessDay(date, prev)` |
 | `get_previous_business_days(fromdate, todate)` | `krxIndex.getBusinessDays(start, end)` |
 | `get_previous_business_days(year, month)` | `krxIndex.getBusinessDaysByMonth(year, month)` |
+| feargreed.py `KRXFetcher.get_index()` (VKOSPI) | `krxIndex.getVkospi(start, end)` |
+| feargreed.py `KRXFetcher.get_index()` (5yr bond) | `krxIndex.getBond5y(start, end)` |
+| feargreed.py `KRXFetcher.get_index()` (10yr bond) | `krxIndex.getBond10y(start, end)` |
+| feargreed.py `KRXFetcher.get_option()` (Call) | `krxIndex.getCallOptionVolume(start, end)` |
+| feargreed.py `KRXFetcher.get_option()` (Put) | `krxIndex.getPutOptionVolume(start, end)` |
 
 ---
 
@@ -207,10 +218,10 @@ com.krxkt/
 
 ## Network Requirements
 
-⚠️ **KRX API는 한국 네트워크에서만 접근 가능합니다.**
+⚠️ **outerLoader Referer를 사용하면 대부분의 엔드포인트가 네트워크 제한 없이 동작합니다.**
 
-- 해외에서 접속 시 "LOGOUT" 응답 반환
-- 통합 테스트 실행 시 한국 VPN 필요
+- outerLoader Referer: 모든 엔드포인트에서 동작 (MDCSTAT01501, MDCSTAT01201, MDCSTAT13102 등)
+- mdiLoader Referer: 한국 IP 필요 (사용하지 않음)
 - 단위 테스트(MockWebServer)는 네트워크 제한 없음
 
 ```bash

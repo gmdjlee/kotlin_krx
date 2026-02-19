@@ -673,6 +673,101 @@ println("첫 영업일: ${janDays.first()}")
 println("마지막 영업일: ${janDays.last()}")
 ```
 
+### 5.11 파생상품 지수 조회
+
+MDCSTAT01201 엔드포인트. feargreed.py의 `KRXFetcher.get_index()` 대응.
+
+```kotlin
+suspend fun getDerivativeIndex(
+    startDate: String,
+    endDate: String,
+    indTpCd: String,     // 지수 타입 코드 (예: "1", "D")
+    idxIndCd: String     // 지수 코드 (예: "300"=VKOSPI)
+): List<DerivativeIndex>
+```
+
+**반환**: `DerivativeIndex` - date, close
+
+```kotlin
+val derivatives = krxIndex.getDerivativeIndex("20210101", "20210131", "1", "300")
+derivatives.forEach { d ->
+    println("${d.date}: ${d.close}")
+}
+```
+
+### 5.12 VKOSPI (변동성 지수) 조회
+
+```kotlin
+suspend fun getVkospi(startDate: String, endDate: String): List<DerivativeIndex>
+```
+
+```kotlin
+val vkospi = krxIndex.getVkospi("20210101", "20210131")
+vkospi.forEach { d -> println("${d.date}: VKOSPI=${d.close}") }
+```
+
+### 5.13 국채 지수 조회
+
+```kotlin
+suspend fun getBond5y(startDate: String, endDate: String): List<DerivativeIndex>
+suspend fun getBond10y(startDate: String, endDate: String): List<DerivativeIndex>
+```
+
+```kotlin
+val bond5y = krxIndex.getBond5y("20210101", "20210131")
+val bond10y = krxIndex.getBond10y("20210101", "20210131")
+
+println("5년국채: ${bond5y.first().close}")
+println("10년국채: ${bond10y.first().close}")
+```
+
+### 5.14 옵션 거래량 조회
+
+MDCSTAT13102 엔드포인트. feargreed.py의 `KRXFetcher.get_option()` 대응.
+KOSPI200 옵션 (콜/풋) 일별 거래량.
+
+```kotlin
+suspend fun getOptionVolume(
+    startDate: String,
+    endDate: String,
+    optionType: String   // "C"=콜, "P"=풋
+): List<OptionVolume>
+```
+
+**반환**: `OptionVolume` - date, totalVolume
+
+```kotlin
+val callVol = krxIndex.getOptionVolume("20210101", "20210131", "C")
+callVol.forEach { d -> println("${d.date}: 콜 거래량=${d.totalVolume}") }
+```
+
+### 5.15 콜/풋 옵션 거래량 편의 메서드
+
+```kotlin
+suspend fun getCallOptionVolume(startDate: String, endDate: String): List<OptionVolume>
+suspend fun getPutOptionVolume(startDate: String, endDate: String): List<OptionVolume>
+```
+
+```kotlin
+val callVol = krxIndex.getCallOptionVolume("20210101", "20210131")
+val putVol = krxIndex.getPutOptionVolume("20210101", "20210131")
+
+callVol.zip(putVol).forEach { (c, p) ->
+    println("${c.date}: 콜=${c.totalVolume}, 풋=${p.totalVolume}")
+}
+```
+
+### 파생상품 지수 코드 상수
+
+```kotlin
+KrxIndex.VKOSPI_TYPE     // "1"
+KrxIndex.VKOSPI_CODE     // "300"
+KrxIndex.BOND_5Y_TYPE    // "D"
+KrxIndex.BOND_5Y_CODE    // "896"
+KrxIndex.BOND_10Y_TYPE   // "1"
+KrxIndex.BOND_10Y_CODE   // "309"
+```
+
 ---
 
 ## 6. Data Models
@@ -711,6 +806,8 @@ println("마지막 영업일: ${janDays.last()}")
 | `IndexOhlcvByTicker` | name, open, high, low, close, volume, tradingValue, marketCap, changeType, change, changeRate | 전종목 지수 (특정일) |
 | `IndexInfo` | ticker, code, name, typeCode, baseDate | 지수 목록 |
 | `IndexPortfolio` | ticker, name, close, changeType, change, changeRate, marketCap | 지수 구성종목 |
+| `DerivativeIndex` | date, close | 파생상품 지수 (VKOSPI, 국채) |
+| `OptionVolume` | date, totalVolume | 옵션 거래량 (콜/풋) |
 
 ### 타입 참고
 
@@ -811,13 +908,16 @@ try {
 
 ## 9. Network Requirements
 
-**KRX API는 한국 네트워크에서만 접근 가능합니다.**
+**KrxKt는 outerLoader Referer를 사용하여 대부분의 KRX 엔드포인트에 접근합니다.**
 
 | 환경 | 동작 |
 |------|------|
 | 한국 내 네트워크 | 정상 작동 |
-| 해외 네트워크 | "LOGOUT" 응답 → `IOException` |
+| 해외 네트워크 | outerLoader Referer 사용 시 정상 작동 |
 | 한국 VPN 사용 | 정상 작동 |
+
+> **참고**: outerLoader Referer는 네트워크 제한 없이 모든 엔드포인트(주식, ETF, 지수, 파생상품)에서 동작합니다.
+> mdiLoader Referer는 한국 IP에서만 동작하므로 사용하지 않습니다.
 
 ### LOGOUT 에러 발생 시
 
@@ -880,6 +980,17 @@ val krxStock = KrxStock(client = krxClient)
 | (N/A) | `krxIndex.getKospi200(start, end)` | 편의 메서드 |
 | (N/A) | `krxIndex.getKosdaq(start, end)` | 편의 메서드 |
 | (N/A) | `krxIndex.getKosdaq150(start, end)` | 편의 메서드 |
+
+### Derivative & Option (feargreed.py 호환)
+
+| feargreed.py | KrxKt | Note |
+|--------------|-------|------|
+| `KRXFetcher.get_index(type="1", code="300")` | `krxIndex.getVkospi(start, end)` | VKOSPI |
+| `KRXFetcher.get_index(type="D", code="896")` | `krxIndex.getBond5y(start, end)` | 5년국채 |
+| `KRXFetcher.get_index(type="1", code="309")` | `krxIndex.getBond10y(start, end)` | 10년국채 |
+| `KRXFetcher.get_option(isuOpt="C")` | `krxIndex.getCallOptionVolume(start, end)` | 콜 옵션 |
+| `KRXFetcher.get_option(isuOpt="P")` | `krxIndex.getPutOptionVolume(start, end)` | 풋 옵션 |
+| (N/A) | `krxIndex.getDerivativeIndex(start, end, type, code)` | 범용 파생지수 |
 
 ### Business Days
 
@@ -998,6 +1109,9 @@ gradlew.bat test
 # 특정 테스트 클래스 실행
 ./gradlew runIntegrationTest -PmainClass=com.krxkt.integration.IndexExtensionTestKt
 
+# 파생상품 통합 테스트 (VKOSPI, 국채, 옵션)
+./gradlew runIntegrationTest -PmainClass=com.krxkt.integration.DerivativeIntegrationTestKt
+
 # 기본 통합 테스트
 ./gradlew runIntegrationTest
 ```
@@ -1026,8 +1140,10 @@ class MyTest {
         mockWebServer = MockWebServer()
         mockWebServer.start()
 
+        val mockUrl = mockWebServer.url("/").toString()
         val client = KrxClient(
-            baseUrl = mockWebServer.url("/").toString()
+            baseUrl = mockUrl,
+            sessionInitUrl = mockUrl
         )
         krxStock = KrxStock(client)
     }
@@ -1071,8 +1187,8 @@ class MyTest {
 이 프로젝트에서 구현된 전체 기능 목록:
 
 ### Phase 1-2: Core Infrastructure
-- KrxClient (OkHttp, retry, session management)
-- KrxJsonParser (OutBlock_1 파싱, 쉼표 숫자 처리)
+- KrxClient (OkHttp, retry, CookieJar, session management)
+- KrxJsonParser (OutBlock_1/block1/output 파싱, 쉼표 숫자 처리)
 - KrxEndpoints (모든 BLD 엔드포인트 상수)
 
 ### Phase 3: Stock APIs
@@ -1092,4 +1208,10 @@ class MyTest {
 - getNearestBusinessDay (MDCSTAT00301 기반 영업일 탐색)
 - getBusinessDays, getBusinessDaysByMonth (기간 내 영업일 목록)
 
-**총 30+ API 함수**, **25+ 데이터 모델**, **50+ 단위 테스트**
+### Phase 7: Derivative APIs (feargreed.py 호환)
+- getDerivativeIndex, getVkospi, getBond5y, getBond10y (MDCSTAT01201)
+- getOptionVolume, getCallOptionVolume, getPutOptionVolume (MDCSTAT13102)
+- KrxClient: CookieJar, 세션 초기화, per-request Referer 지원
+- KrxJsonParser: block1 키 파싱 지원
+
+**총 37+ API 함수**, **27+ 데이터 모델**, **245+ 단위 테스트**
