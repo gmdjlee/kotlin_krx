@@ -19,8 +19,11 @@ object KrxEndpoints {
     @Deprecated("Use BASE_URL (HTTPS) instead", replaceWith = ReplaceWith("BASE_URL"))
     const val BASE_URL_HTTP = "http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd"
 
-    /** 필수 Referer 헤더 (없으면 LOGOUT 응답) */
+    /** 기본 Referer 헤더 (outerLoader — 세션 불필요, 모든 엔드포인트에서 동작) */
     const val REFERER = "https://data.krx.co.kr/contents/MDC/MDI/outerLoader/index.cmd"
+
+    /** 세션 초기화 URL (GET 요청으로 JSESSIONID 획득, 필요 시 사용) */
+    const val SESSION_INIT_URL = "https://data.krx.co.kr/contents/MDC/MDI/mdiLoader/index.cmd?menuId=MDC0201"
 
     /** User-Agent 헤더 (브라우저 시뮬레이션) */
     const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -81,6 +84,13 @@ object KrxEndpoints {
 
         /** 투자자별 거래실적 - 개별종목 일별추이 (상세) */
         const val INVESTOR_TRADING_TICKER_DAILY = "dbms/MDC/STAT/standard/MDCSTAT02303"
+
+        // === Derivative Data ===
+        /** 파생상품 지수 시세 (VKOSPI, 국채 등) */
+        const val DERIVATIVE_INDEX = "dbms/MDC/STAT/standard/MDCSTAT01201"
+
+        /** 옵션 거래량 (콜/풋 옵션, 일별 추이) */
+        const val OPTION_TRADING = "dbms/MDC/STAT/standard/MDCSTAT13102"
 
         // === Short Selling ===
         /** 공매도 거래 - 전종목 (특정일) */

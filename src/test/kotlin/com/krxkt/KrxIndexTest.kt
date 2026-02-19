@@ -22,7 +22,8 @@ class KrxIndexTest {
     fun setup() {
         mockServer = MockWebServer()
         mockServer.start()
-        val client = KrxClient(baseUrl = mockServer.url("/").toString())
+        val mockUrl = mockServer.url("/").toString()
+        val client = KrxClient(baseUrl = mockUrl, sessionInitUrl = mockUrl)
         krxIndex = KrxIndex(client)
     }
 
@@ -365,6 +366,165 @@ class KrxIndexTest {
         assertFailsWith<IllegalArgumentException> {
             krxIndex.getBusinessDaysByMonth(2021, 13)
         }
+    }
+
+    // ====================================================
+    // getDerivativeIndex (파생상품 지수)
+    // ====================================================
+
+    @Test
+    fun `getDerivativeIndex should return parsed VKOSPI data`() = runTest {
+        val responseJson = """
+            {
+                "output": [
+                    {"TRD_DD": "2021/01/21", "CLSPRC_IDX": "28.15"},
+                    {"TRD_DD": "2021/01/22", "CLSPRC_IDX": "27.45"}
+                ]
+            }
+        """.trimIndent()
+
+        mockServer.enqueue(MockResponse().setBody(responseJson).setResponseCode(200))
+
+        val result = krxIndex.getVkospi("20210121", "20210122")
+
+        assertEquals(2, result.size)
+        assertEquals("20210121", result[0].date)
+        assertEquals(28.15, result[0].close, 0.01)
+        assertEquals("20210122", result[1].date)
+        assertEquals(27.45, result[1].close, 0.01)
+    }
+
+    @Test
+    fun `getDerivativeIndex should send correct parameters`() = runTest {
+        mockServer.enqueue(MockResponse().setBody("""{"output": []}""").setResponseCode(200))
+
+        krxIndex.getDerivativeIndex("20210101", "20210131", "1", "300")
+
+        val request = mockServer.takeRequest()
+        val body = java.net.URLDecoder.decode(request.body.readUtf8(), "UTF-8")
+        assertTrue(body.contains("bld=${KrxEndpoints.Bld.DERIVATIVE_INDEX}"))
+        assertTrue(body.contains("indTpCd=1"))
+        assertTrue(body.contains("idxIndCd=300"))
+        assertTrue(body.contains("strtDd=20210101"))
+        assertTrue(body.contains("endDd=20210131"))
+    }
+
+    @Test
+    fun `getBond5y should return bond index data`() = runTest {
+        val responseJson = """
+            {
+                "output": [
+                    {"TRD_DD": "2021/01/22", "CLSPRC_IDX": "1.85"}
+                ]
+            }
+        """.trimIndent()
+
+        mockServer.enqueue(MockResponse().setBody(responseJson).setResponseCode(200))
+
+        val result = krxIndex.getBond5y("20210122", "20210122")
+
+        assertEquals(1, result.size)
+        assertEquals(1.85, result[0].close, 0.01)
+    }
+
+    @Test
+    fun `getBond10y should return bond index data`() = runTest {
+        val responseJson = """
+            {
+                "output": [
+                    {"TRD_DD": "2021/01/22", "CLSPRC_IDX": "2.15"}
+                ]
+            }
+        """.trimIndent()
+
+        mockServer.enqueue(MockResponse().setBody(responseJson).setResponseCode(200))
+
+        val result = krxIndex.getBond10y("20210122", "20210122")
+
+        assertEquals(1, result.size)
+        assertEquals(2.15, result[0].close, 0.01)
+    }
+
+    @Test
+    fun `getDerivativeIndex on holiday should return empty list`() = runTest {
+        mockServer.enqueue(MockResponse().setBody("""{"output": []}""").setResponseCode(200))
+
+        val result = krxIndex.getVkospi("20210101", "20210101")
+        assertTrue(result.isEmpty())
+    }
+
+    // ====================================================
+    // getOptionVolume (옵션 거래량)
+    // ====================================================
+
+    @Test
+    fun `getCallOptionVolume should return parsed data`() = runTest {
+        val responseJson = """
+            {
+                "output": [
+                    {"TRD_DD": "2021/01/21", "AMT_OR_QTY": "1,500,000"},
+                    {"TRD_DD": "2021/01/22", "AMT_OR_QTY": "1,234,567"}
+                ]
+            }
+        """.trimIndent()
+
+        mockServer.enqueue(MockResponse().setBody(responseJson).setResponseCode(200))
+
+        val result = krxIndex.getCallOptionVolume("20210121", "20210122")
+
+        assertEquals(2, result.size)
+        assertEquals("20210121", result[0].date)
+        assertEquals(1500000L, result[0].totalVolume)
+        assertEquals("20210122", result[1].date)
+        assertEquals(1234567L, result[1].totalVolume)
+    }
+
+    @Test
+    fun `getPutOptionVolume should return parsed data`() = runTest {
+        val responseJson = """
+            {
+                "output": [
+                    {"TRD_DD": "2021/01/22", "AMT_OR_QTY": "987,654"}
+                ]
+            }
+        """.trimIndent()
+
+        mockServer.enqueue(MockResponse().setBody(responseJson).setResponseCode(200))
+
+        val result = krxIndex.getPutOptionVolume("20210122", "20210122")
+
+        assertEquals(1, result.size)
+        assertEquals(987654L, result[0].totalVolume)
+    }
+
+    @Test
+    fun `getOptionVolume should send correct parameters for call`() = runTest {
+        mockServer.enqueue(MockResponse().setBody("""{"output": []}""").setResponseCode(200))
+
+        krxIndex.getOptionVolume("20210101", "20210131", "C")
+
+        val request = mockServer.takeRequest()
+        val body = java.net.URLDecoder.decode(request.body.readUtf8(), "UTF-8")
+        assertTrue(body.contains("bld=${KrxEndpoints.Bld.OPTION_TRADING}"))
+        assertTrue(body.contains("isuOpt=C"))
+        assertTrue(body.contains("prodId=KR___OPK2I"))
+        assertTrue(body.contains("strtDd=20210101"))
+        assertTrue(body.contains("endDd=20210131"))
+    }
+
+    @Test
+    fun `getOptionVolume with invalid type should throw`() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            krxIndex.getOptionVolume("20210101", "20210131", "X")
+        }
+    }
+
+    @Test
+    fun `getOptionVolume on holiday should return empty list`() = runTest {
+        mockServer.enqueue(MockResponse().setBody("""{"output": []}""").setResponseCode(200))
+
+        val result = krxIndex.getCallOptionVolume("20210101", "20210101")
+        assertTrue(result.isEmpty())
     }
 
     // ====================================================

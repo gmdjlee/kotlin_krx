@@ -90,6 +90,59 @@ class KrxJsonParserTest {
     }
 
     @Test
+    fun `parseOutBlock should extract data from block1`() {
+        val json = """
+            {
+                "block1": [
+                    {"TRD_DD": "2021/01/22", "AMT_OR_QTY": "1,234,567"},
+                    {"TRD_DD": "2021/01/21", "AMT_OR_QTY": "987,654"}
+                ]
+            }
+        """.trimIndent()
+
+        val result = KrxJsonParser.parseOutBlock(json)
+
+        assertEquals(2, result.size)
+        assertEquals("2021/01/22", result[0].get("TRD_DD").asString)
+        assertEquals("1,234,567", result[0].get("AMT_OR_QTY").asString)
+    }
+
+    @Test
+    fun `parseOutBlock should prefer OutBlock_1 over block1`() {
+        val json = """
+            {
+                "OutBlock_1": [
+                    {"ISU_SRT_CD": "005930"}
+                ],
+                "block1": [
+                    {"TRD_DD": "2021/01/22"}
+                ]
+            }
+        """.trimIndent()
+
+        val result = KrxJsonParser.parseOutBlock(json)
+
+        assertEquals(1, result.size)
+        assertEquals("005930", result[0].get("ISU_SRT_CD").asString)
+    }
+
+    @Test
+    fun `parseOutBlock should fall back from block1 to output`() {
+        val json = """
+            {
+                "output": [
+                    {"ETF_NM": "KODEX 200"}
+                ]
+            }
+        """.trimIndent()
+
+        val result = KrxJsonParser.parseOutBlock(json)
+
+        assertEquals(1, result.size)
+        assertEquals("KODEX 200", result[0].get("ETF_NM").asString)
+    }
+
+    @Test
     fun `parseTotalCount should extract totCnt`() {
         val json = """{"OutBlock_1": [], "totCnt": 2500}"""
 

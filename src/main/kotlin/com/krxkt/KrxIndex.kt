@@ -2,11 +2,13 @@ package com.krxkt
 
 import com.krxkt.api.KrxClient
 import com.krxkt.api.KrxEndpoints
+import com.krxkt.model.DerivativeIndex
 import com.krxkt.model.IndexInfo
 import com.krxkt.model.IndexMarket
 import com.krxkt.model.IndexOhlcv
 import com.krxkt.model.IndexOhlcvByTicker
 import com.krxkt.model.IndexPortfolio
+import com.krxkt.model.OptionVolume
 import com.krxkt.parser.KrxJsonParser
 import com.krxkt.util.DateUtils
 
@@ -248,6 +250,148 @@ class KrxIndex(
     }
 
     // ============================================================
+    // 파생상품 지수 (Derivative Index)
+    // ============================================================
+
+    /**
+     * 파생상품 지수 조회 (MDCSTAT01201)
+     *
+     * feargreed.py의 KRXFetcher.get_index() (type="D") 대응:
+     * - VKOSPI, 5년국채, 10년국채 등 파생상품 관련 지수
+     *
+     * @param startDate 시작 날짜 (yyyyMMdd)
+     * @param endDate 종료 날짜 (yyyyMMdd)
+     * @param indTpCd 지수 타입 코드 (예: "1", "D")
+     * @param idxIndCd 지수 코드 (예: "300"=VKOSPI, "896"=5년국채, "309"=10년국채)
+     * @return 날짜별 종가 리스트
+     */
+    suspend fun getDerivativeIndex(
+        startDate: String,
+        endDate: String,
+        indTpCd: String,
+        idxIndCd: String
+    ): List<DerivativeIndex> {
+        DateUtils.validateDateRange(startDate, endDate)
+
+        val params = mapOf(
+            "bld" to KrxEndpoints.Bld.DERIVATIVE_INDEX,
+            "locale" to "ko_KR",
+            "indTpCd" to indTpCd,
+            "idxIndCd" to idxIndCd,
+            "idxCd" to indTpCd,
+            "idxCd2" to idxIndCd,
+            "strtDd" to startDate,
+            "endDd" to endDate,
+            "csvxls_isNo" to "false"
+        )
+
+        val response = client.post(params)
+        val jsonArray = KrxJsonParser.parseOutBlock(response)
+
+        return jsonArray.mapNotNull { DerivativeIndex.fromJson(it) }
+    }
+
+    /**
+     * VKOSPI (변동성 지수) 조회
+     *
+     * @param startDate 시작 날짜 (yyyyMMdd)
+     * @param endDate 종료 날짜 (yyyyMMdd)
+     * @return VKOSPI 종가 리스트
+     */
+    suspend fun getVkospi(startDate: String, endDate: String): List<DerivativeIndex> {
+        return getDerivativeIndex(startDate, endDate, VKOSPI_TYPE, VKOSPI_CODE)
+    }
+
+    /**
+     * 5년 국채 지수 조회
+     *
+     * @param startDate 시작 날짜 (yyyyMMdd)
+     * @param endDate 종료 날짜 (yyyyMMdd)
+     * @return 5년국채 종가 리스트
+     */
+    suspend fun getBond5y(startDate: String, endDate: String): List<DerivativeIndex> {
+        return getDerivativeIndex(startDate, endDate, BOND_5Y_TYPE, BOND_5Y_CODE)
+    }
+
+    /**
+     * 10년 국채 지수 조회
+     *
+     * @param startDate 시작 날짜 (yyyyMMdd)
+     * @param endDate 종료 날짜 (yyyyMMdd)
+     * @return 10년국채 종가 리스트
+     */
+    suspend fun getBond10y(startDate: String, endDate: String): List<DerivativeIndex> {
+        return getDerivativeIndex(startDate, endDate, BOND_10Y_TYPE, BOND_10Y_CODE)
+    }
+
+    // ============================================================
+    // 옵션 거래량 (Option Trading Volume)
+    // ============================================================
+
+    /**
+     * 옵션 거래량 조회 (MDCSTAT13102)
+     *
+     * feargreed.py의 KRXFetcher.get_option() 대응:
+     * - KOSPI200 옵션 (콜/풋) 일별 거래량
+     *
+     * @param startDate 시작 날짜 (yyyyMMdd)
+     * @param endDate 종료 날짜 (yyyyMMdd)
+     * @param optionType 옵션 타입 ("C"=콜, "P"=풋)
+     * @return 날짜별 거래량 리스트
+     */
+    suspend fun getOptionVolume(
+        startDate: String,
+        endDate: String,
+        optionType: String
+    ): List<OptionVolume> {
+        DateUtils.validateDateRange(startDate, endDate)
+        require(optionType == "C" || optionType == "P") {
+            "optionType must be 'C' (Call) or 'P' (Put), got: $optionType"
+        }
+
+        val params = mapOf(
+            "bld" to KrxEndpoints.Bld.OPTION_TRADING,
+            "inqTpCd" to "2",
+            "prtType" to "QTY",
+            "prtCheck" to "SU",
+            "isuCd02" to "KR___OPK2I",
+            "isuCd" to "KR___OPK2I",
+            "prodId" to "KR___OPK2I",
+            "aggBasTpCd" to "",
+            "strtDd" to startDate,
+            "endDd" to endDate,
+            "isuOpt" to optionType
+        )
+
+        val response = client.post(params)
+        val jsonArray = KrxJsonParser.parseOutBlock(response)
+
+        return jsonArray.mapNotNull { OptionVolume.fromJson(it) }
+    }
+
+    /**
+     * 콜 옵션 거래량 조회
+     *
+     * @param startDate 시작 날짜 (yyyyMMdd)
+     * @param endDate 종료 날짜 (yyyyMMdd)
+     * @return 콜 옵션 일별 거래량 리스트
+     */
+    suspend fun getCallOptionVolume(startDate: String, endDate: String): List<OptionVolume> {
+        return getOptionVolume(startDate, endDate, "C")
+    }
+
+    /**
+     * 풋 옵션 거래량 조회
+     *
+     * @param startDate 시작 날짜 (yyyyMMdd)
+     * @param endDate 종료 날짜 (yyyyMMdd)
+     * @return 풋 옵션 일별 거래량 리스트
+     */
+    suspend fun getPutOptionVolume(startDate: String, endDate: String): List<OptionVolume> {
+        return getOptionVolume(startDate, endDate, "P")
+    }
+
+    // ============================================================
     // 영업일 조회 (Business Days)
     // ============================================================
 
@@ -376,5 +520,22 @@ class KrxIndex(
 
         /** KOSDAQ 150 티커 */
         const val TICKER_KOSDAQ_150 = "2203"
+
+        // === 파생상품 지수 코드 (MDCSTAT01201 파라미터) ===
+
+        /** VKOSPI 타입 코드 */
+        const val VKOSPI_TYPE = "1"
+        /** VKOSPI 지수 코드 */
+        const val VKOSPI_CODE = "300"
+
+        /** 5년국채 타입 코드 */
+        const val BOND_5Y_TYPE = "D"
+        /** 5년국채 지수 코드 */
+        const val BOND_5Y_CODE = "896"
+
+        /** 10년국채 타입 코드 */
+        const val BOND_10Y_TYPE = "1"
+        /** 10년국채 지수 코드 */
+        const val BOND_10Y_CODE = "309"
     }
 }

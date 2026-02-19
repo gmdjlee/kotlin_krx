@@ -19,6 +19,7 @@ object KrxJsonParser {
      *
      * KRX API는 엔드포인트에 따라 다른 키를 사용:
      * - OutBlock_1: 대부분의 STAT 엔드포인트
+     * - block1: 파생상품 통계 (MDCSTAT13102, MDCSTAT01201 등)
      * - output: ETF 목록 등 일부 엔드포인트
      *
      * @param json KRX API JSON 응답 문자열
@@ -29,8 +30,9 @@ object KrxJsonParser {
         return try {
             val root = JsonParser.parseString(json).asJsonObject
 
-            // OutBlock_1 또는 output 키 시도
+            // OutBlock_1, block1, 또는 output 키 시도
             val outBlock = root.getAsJsonArray("OutBlock_1")
+                ?: root.getAsJsonArray("block1")
                 ?: root.getAsJsonArray("output")
                 ?: return emptyList()
 
