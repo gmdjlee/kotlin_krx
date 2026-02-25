@@ -284,7 +284,7 @@ class KrxStock(
 
             val response = client.post(params)
             val jsonArray = KrxJsonParser.parseOutBlock(response)
-            jsonArray.mapNotNull { InvestorTrading.fromJson(it) }
+            jsonArray.mapNotNull { InvestorTrading.fromTickerJson(it) }
         }
     }
 

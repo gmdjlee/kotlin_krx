@@ -21,6 +21,14 @@ import com.krxkt.parser.KrxJsonParser
  * - TRDVAL11 → foreigner (외국인)
  * - TRDVAL_TOT → total (전체)
  *
+ * ⚠️ 개별종목 일별추이 (MDCSTAT02303)는 컬럼 배치가 다름:
+ * - TRDVAL1~7 → 기관 세부항목 (금융투자~연기금) — 동일
+ * - TRDVAL8  → 기타법인 (NOT 기관합계!)
+ * - TRDVAL9  → 개인
+ * - TRDVAL10 → 외국인
+ * - TRDVAL11 → 기타외국인
+ * → fromTickerJson()을 사용해야 함
+ *
  * @property date 거래일 (yyyyMMdd)
  * @property financialInvestment 금융투자 거래대금/거래량
  * @property insurance 보험 거래대금/거래량
@@ -75,6 +83,67 @@ data class InvestorTrading(
                     otherCorporation = KrxJsonParser.parseLong(json.get("TRDVAL9")?.asString) ?: 0L,
                     individual = KrxJsonParser.parseLong(json.get("TRDVAL10")?.asString) ?: 0L,
                     foreigner = KrxJsonParser.parseLong(json.get("TRDVAL11")?.asString) ?: 0L,
+                    total = KrxJsonParser.parseLong(json.get("TRDVAL_TOT")?.asString) ?: 0L
+                )
+            } catch (e: Exception) {
+                null
+            }
+        }
+
+        /**
+         * KRX JSON 응답에서 InvestorTrading 객체 생성 (개별종목 일별추이 MDCSTAT02303)
+         *
+         * ⚠️ 개별종목 엔드포인트는 전체시장과 컬럼 배치가 다름:
+         * - TRDVAL1~7: 기관 세부항목 (금융투자, 보험, 투신, 사모, 은행, 기타금융, 연기금)
+         * - TRDVAL8:  기타법인 (NOT 기관합계!)
+         * - TRDVAL9:  개인
+         * - TRDVAL10: 외국인
+         * - TRDVAL11: 기타외국인
+         *
+         * 기관합계 = TRDVAL1 + ... + TRDVAL7 (직접 합산)
+         * 외국인합계 = TRDVAL10 + TRDVAL11 (외국인 + 기타외국인)
+         *
+         * @param json OutBlock_1 배열의 개별 JSON 객체
+         * @return InvestorTrading 또는 null (파싱 실패 시)
+         */
+        fun fromTickerJson(json: JsonObject): InvestorTrading? {
+            return try {
+                val dateRaw = json.get("TRD_DD")?.asString ?: return null
+                val date = dateRaw.replace("/", "")
+
+                val financialInvestment = KrxJsonParser.parseLong(json.get("TRDVAL1")?.asString) ?: 0L
+                val insurance = KrxJsonParser.parseLong(json.get("TRDVAL2")?.asString) ?: 0L
+                val investmentTrust = KrxJsonParser.parseLong(json.get("TRDVAL3")?.asString) ?: 0L
+                val privateEquity = KrxJsonParser.parseLong(json.get("TRDVAL4")?.asString) ?: 0L
+                val bank = KrxJsonParser.parseLong(json.get("TRDVAL5")?.asString) ?: 0L
+                val otherFinance = KrxJsonParser.parseLong(json.get("TRDVAL6")?.asString) ?: 0L
+                val pensionFund = KrxJsonParser.parseLong(json.get("TRDVAL7")?.asString) ?: 0L
+
+                // 개별종목: TRDVAL8 = 기타법인, TRDVAL9 = 개인, TRDVAL10 = 외국인, TRDVAL11 = 기타외국인
+                val otherCorporation = KrxJsonParser.parseLong(json.get("TRDVAL8")?.asString) ?: 0L
+                val individual = KrxJsonParser.parseLong(json.get("TRDVAL9")?.asString) ?: 0L
+                val foreignerMain = KrxJsonParser.parseLong(json.get("TRDVAL10")?.asString) ?: 0L
+                val foreignerOther = KrxJsonParser.parseLong(json.get("TRDVAL11")?.asString) ?: 0L
+
+                // 기관합계 = 기관 세부항목 합산
+                val institutionalTotal = financialInvestment + insurance + investmentTrust +
+                        privateEquity + bank + otherFinance + pensionFund
+                // 외국인합계 = 외국인 + 기타외국인
+                val foreigner = foreignerMain + foreignerOther
+
+                InvestorTrading(
+                    date = date,
+                    financialInvestment = financialInvestment,
+                    insurance = insurance,
+                    investmentTrust = investmentTrust,
+                    privateEquity = privateEquity,
+                    bank = bank,
+                    otherFinance = otherFinance,
+                    pensionFund = pensionFund,
+                    institutionalTotal = institutionalTotal,
+                    otherCorporation = otherCorporation,
+                    individual = individual,
+                    foreigner = foreigner,
                     total = KrxJsonParser.parseLong(json.get("TRDVAL_TOT")?.asString) ?: 0L
                 )
             } catch (e: Exception) {
