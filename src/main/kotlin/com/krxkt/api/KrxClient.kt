@@ -1,5 +1,6 @@
 package com.krxkt.api
 
+import com.google.gson.JsonParser
 import com.krxkt.error.KrxError
 import kotlinx.coroutines.delay
 import okhttp3.Cookie
@@ -38,6 +39,9 @@ class KrxClient(
 ) {
     @Volatile
     private var sessionInitialized = false
+
+    @Volatile
+    private var loggedIn = false
 
     companion object {
         private const val MAX_RETRIES = 3
@@ -88,6 +92,148 @@ class KrxClient(
     }
 
     /**
+     * KRX data.krx.co.kr 로그인
+     *
+     * 로그인 후 세션 쿠키(JSESSIONID)가 갱신되어 이후 모든 API 호출에 자동 적용됨.
+     * 동일한 KrxClient 인스턴스(OkHttpClient/CookieJar)를 공유하는 KrxStock, KrxEtf,
+     * KrxIndex 등 모든 API 객체에서 로그인 세션이 유지됨.
+     *
+     * 로그인 흐름:
+     *   1. GET MDCCOMS001.cmd  → 초기 JSESSIONID 발급
+     *   2. GET login.jsp       → iframe 세션 초기화
+     *   3. POST MDCCOMS001D1.cmd → 실제 로그인
+     *   4. CD011(중복 로그인) → skipDup=Y 추가 후 재전송
+     *
+     * 사용 예:
+     * ```
+     * val client = KrxClient()
+     * val success = client.login("your_id", "your_pw")
+     * if (success) {
+     *     val stock = KrxStock(client)
+     *     val ohlcv = stock.getMarketOhlcv("20260227")
+     * }
+     * ```
+     *
+     * @param loginId KRX 로그인 ID
+     * @param loginPw KRX 로그인 비밀번호
+     * @return 로그인 성공 여부 (CD001 = 성공)
+     * @throws KrxError.NetworkError 네트워크 에러
+     */
+    fun login(loginId: String, loginPw: String): Boolean {
+        // 1. GET 로그인 페이지 → 초기 JSESSIONID 발급
+        val pageRequest = Request.Builder()
+            .url(KrxEndpoints.LOGIN_PAGE)
+            .get()
+            .addHeader("User-Agent", KrxEndpoints.USER_AGENT)
+            .build()
+
+        try {
+            okHttpClient.newCall(pageRequest).execute().close()
+        } catch (e: IOException) {
+            throw KrxError.NetworkError("Failed to load login page", e)
+        }
+
+        // 2. GET login.jsp → iframe 세션 초기화
+        val jspRequest = Request.Builder()
+            .url(KrxEndpoints.LOGIN_JSP)
+            .get()
+            .addHeader("User-Agent", KrxEndpoints.USER_AGENT)
+            .addHeader("Referer", KrxEndpoints.LOGIN_PAGE)
+            .build()
+
+        try {
+            okHttpClient.newCall(jspRequest).execute().close()
+        } catch (e: IOException) {
+            throw KrxError.NetworkError("Failed to load login JSP", e)
+        }
+
+        // 3. POST 로그인
+        val headers = mapOf(
+            "User-Agent" to KrxEndpoints.USER_AGENT,
+            "Referer" to KrxEndpoints.LOGIN_PAGE
+        )
+
+        var errorCode = postLogin(loginId, loginPw, headers, skipDup = false)
+
+        // 4. CD011 중복 로그인 처리
+        if (errorCode == "CD011") {
+            errorCode = postLogin(loginId, loginPw, headers, skipDup = true)
+        }
+
+        if (errorCode == "CD001") {
+            sessionInitialized = true
+            loggedIn = true
+            return true
+        }
+
+        return false
+    }
+
+    /**
+     * 로그인 상태 확인
+     */
+    fun isLoggedIn(): Boolean = loggedIn
+
+    /**
+     * 테스트용: 로그인 상태 강제 설정
+     *
+     * MockWebServer 테스트에서 로그인 과정을 건너뛰기 위해 사용.
+     * 프로덕션 코드에서는 login()을 사용할 것.
+     */
+    internal fun setLoggedInForTest(value: Boolean) {
+        loggedIn = value
+        sessionInitialized = value
+    }
+
+    /**
+     * 로그인 POST 실행 (내부용)
+     *
+     * @return _error_code 값
+     */
+    private fun postLogin(
+        loginId: String,
+        loginPw: String,
+        headers: Map<String, String>,
+        skipDup: Boolean
+    ): String {
+        val formBuilder = FormBody.Builder()
+            .add("mbrNm", "")
+            .add("telNo", "")
+            .add("di", "")
+            .add("certType", "")
+            .add("mbrId", loginId)
+            .add("pw", loginPw)
+
+        if (skipDup) {
+            formBuilder.add("skipDup", "Y")
+        }
+
+        val requestBuilder = Request.Builder()
+            .url(KrxEndpoints.LOGIN_URL)
+            .post(formBuilder.build())
+
+        headers.forEach { (key, value) ->
+            requestBuilder.addHeader(key, value)
+        }
+
+        val response = try {
+            okHttpClient.newCall(requestBuilder.build()).execute()
+        } catch (e: IOException) {
+            throw KrxError.NetworkError("Login request failed", e)
+        }
+
+        return response.use { resp ->
+            val body = resp.body?.string() ?: throw KrxError.NetworkError("Empty login response")
+            try {
+                val json = JsonParser.parseString(body).asJsonObject
+                json.get("_error_code")?.asString ?: ""
+            } catch (e: Exception) {
+                throw KrxError.ParseError("Failed to parse login response: ${body.take(200)}", e)
+            }
+        }
+    }
+
+    /**
      * KRX API POST 요청 실행 (기본 Referer)
      *
      * @param params 요청 파라미터 (bld, mktId, trdDd 등)
@@ -109,6 +255,10 @@ class KrxClient(
      * @throws KrxError.NetworkError 네트워크 에러
      */
     suspend fun post(params: Map<String, String>, referer: String): String {
+        if (!loggedIn) {
+            throw KrxError.AuthenticationError()
+        }
+
         var lastException: Exception? = null
 
         repeat(MAX_RETRIES) { attempt ->
@@ -118,11 +268,12 @@ class KrxClient(
                 throw e
             } catch (e: IOException) {
                 lastException = e
+                if (e.message?.contains("LOGOUT") == true) {
+                    loggedIn = false
+                    sessionInitialized = false
+                    throw KrxError.AuthenticationError("Session expired (LOGOUT). Please call login() again.")
+                }
                 if (attempt < MAX_RETRIES - 1) {
-                    if (e.message?.contains("LOGOUT") == true) {
-                        sessionInitialized = false
-                        initSession()
-                    }
                     delay(RETRY_DELAYS_MS[attempt])
                 }
             }
@@ -197,20 +348,28 @@ class KrxClient(
  *
  * KRX 세션 쿠키(JSESSIONID)를 자동 관리.
  * requests.Session()의 쿠키 관리와 동일한 역할.
+ *
+ * 스레드 안전: synchronized(lock) 으로 동시 접근 보호.
+ * OkHttp는 여러 스레드에서 CookieJar를 호출할 수 있으므로 필수.
  */
 class InMemoryCookieJar : CookieJar {
+    private val lock = Any()
     private val store = mutableListOf<Cookie>()
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
-        cookies.forEach { newCookie ->
-            store.removeAll { it.name == newCookie.name && it.domain == newCookie.domain }
+        synchronized(lock) {
+            cookies.forEach { newCookie ->
+                store.removeAll { it.name == newCookie.name && it.domain == newCookie.domain }
+            }
+            store.addAll(cookies)
         }
-        store.addAll(cookies)
     }
 
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
-        val now = System.currentTimeMillis()
-        store.removeAll { it.expiresAt < now }
-        return store.filter { it.matches(url) }
+        synchronized(lock) {
+            val now = System.currentTimeMillis()
+            store.removeAll { it.expiresAt < now }
+            return store.filter { it.matches(url) }.toList()  // 방어적 복사
+        }
     }
 }

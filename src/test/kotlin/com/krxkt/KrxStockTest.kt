@@ -22,6 +22,7 @@ class KrxStockTest {
         mockServer = MockWebServer()
         mockServer.start()
         val client = KrxClient(baseUrl = mockServer.url("/").toString())
+        client.setLoggedInForTest(true)
         krxStock = KrxStock(client)
     }
 

@@ -26,6 +26,12 @@ sealed class KrxError(message: String, cause: Throwable? = null) : Exception(mes
     class InvalidDateError(val date: String) : KrxError("Invalid date format: $date (expected: yyyyMMdd)")
 
     /**
+     * 인증 에러 (로그인 필요)
+     * login() 호출 후 재시도 필요
+     */
+    class AuthenticationError(message: String = "Login required. Call KrxClient.login(id, pw) before making API requests.") : KrxError(message)
+
+    /**
      * 재시도 가능 여부 판단
      * NetworkError만 재시도 대상
      */

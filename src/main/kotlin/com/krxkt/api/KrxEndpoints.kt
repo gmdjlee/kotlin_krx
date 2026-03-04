@@ -25,8 +25,18 @@ object KrxEndpoints {
     /** 세션 초기화 URL (GET 요청으로 JSESSIONID 획득, 필요 시 사용) */
     const val SESSION_INIT_URL = "https://data.krx.co.kr/contents/MDC/MDI/mdiLoader/index.cmd?menuId=MDC0201"
 
+    // === Login URLs ===
+    /** 로그인 페이지 (초기 JSESSIONID 발급) */
+    const val LOGIN_PAGE = "https://data.krx.co.kr/contents/MDC/COMS/client/MDCCOMS001.cmd"
+
+    /** 로그인 JSP (iframe 세션 초기화) */
+    const val LOGIN_JSP = "https://data.krx.co.kr/contents/MDC/COMS/client/view/login.jsp?site=mdc"
+
+    /** 로그인 POST URL (실제 인증) */
+    const val LOGIN_URL = "https://data.krx.co.kr/contents/MDC/COMS/client/MDCCOMS001D1.cmd"
+
     /** User-Agent 헤더 (브라우저 시뮬레이션) */
-    const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 
     /**
      * BLD (Business Logic Definition) 값

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     kotlin("jvm") version "2.1.0"
     `java-library`
@@ -55,10 +57,20 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     }
 }
 
+// local.properties에서 KRX credentials 로드
+val localProps = Properties()
+file("local.properties").takeIf { it.exists() }?.inputStream()?.use { localProps.load(it) }
+
 // Run integration test main classes
 tasks.register<JavaExec>("runIntegrationTest") {
     group = "verification"
     description = "Run integration test main class"
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set(project.findProperty("mainClass")?.toString() ?: "com.krxkt.integration.EtfPortfolioTestKt")
+
+    // Gradle 프로퍼티 또는 local.properties에서 KRX credentials 전달
+    listOf("krxId", "krxPw").forEach { prop ->
+        val value = project.findProperty(prop)?.toString() ?: localProps.getProperty(prop)
+        if (value != null) systemProperty(prop, value)
+    }
 }

@@ -24,6 +24,7 @@ class KrxIndexTest {
         mockServer.start()
         val mockUrl = mockServer.url("/").toString()
         val client = KrxClient(baseUrl = mockUrl, sessionInitUrl = mockUrl)
+        client.setLoggedInForTest(true)
         krxIndex = KrxIndex(client)
     }
 

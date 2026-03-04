@@ -26,6 +26,7 @@ class KrxClientTest {
         mockServer = MockWebServer()
         mockServer.start()
         client = KrxClient(baseUrl = mockServer.url("/").toString())
+        client.setLoggedInForTest(true)
     }
 
     @AfterTest
@@ -147,29 +148,34 @@ class KrxClientTest {
     // ====================================================
 
     @Test
-    fun `post should throw IOException on LOGOUT response and retry`() = runTest {
-        // LOGOUT is treated as IOException, triggers retry
-        repeat(3) {
-            mockServer.enqueue(MockResponse().setBody("LOGOUT").setResponseCode(200))
-        }
+    fun `post should throw AuthenticationError on LOGOUT response`() = runTest {
+        mockServer.enqueue(MockResponse().setBody("LOGOUT").setResponseCode(200))
 
-        val error = assertFailsWith<KrxError.NetworkError> {
+        val error = assertFailsWith<KrxError.AuthenticationError> {
             client.post(mapOf("bld" to "test"))
         }
-        assertContains(error.message ?: "", "Failed after 3 attempts")
-        assertEquals(3, mockServer.requestCount)
+        assertContains(error.message ?: "", "Session expired")
+        assertTrue(!client.isLoggedIn())
     }
 
     @Test
-    fun `post should throw on LOGOUT with whitespace`() = runTest {
-        repeat(3) {
-            mockServer.enqueue(MockResponse().setBody("  LOGOUT  ").setResponseCode(200))
-        }
+    fun `post should throw AuthenticationError on LOGOUT with whitespace`() = runTest {
+        mockServer.enqueue(MockResponse().setBody("  LOGOUT  ").setResponseCode(200))
 
-        val error = assertFailsWith<KrxError.NetworkError> {
+        val error = assertFailsWith<KrxError.AuthenticationError> {
             client.post(mapOf("bld" to "test"))
         }
-        assertContains(error.message ?: "", "Failed after 3 attempts")
+        assertContains(error.message ?: "", "Session expired")
+    }
+
+    @Test
+    fun `post should throw AuthenticationError when not logged in`() = runTest {
+        client.setLoggedInForTest(false)
+
+        val error = assertFailsWith<KrxError.AuthenticationError> {
+            client.post(mapOf("bld" to "test"))
+        }
+        assertContains(error.message ?: "", "Login required")
     }
 
     // ====================================================
