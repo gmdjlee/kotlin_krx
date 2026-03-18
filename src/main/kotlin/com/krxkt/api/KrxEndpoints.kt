@@ -56,6 +56,9 @@ object KrxEndpoints {
         /** 투자지표 (PER, PBR, EPS, BPS, DPS, 배당수익률) */
         const val FUNDAMENTAL = "dbms/MDC/STAT/standard/MDCSTAT03501"
 
+        /** 개별종목 투자지표 추이 (PER, PBR, EPS, BPS, DPS, 배당수익률) */
+        const val FUNDAMENTAL_BY_TICKER = "dbms/MDC/STAT/standard/MDCSTAT03502"
+
         /** 종목 리스트 (티커 목록) */
         const val TICKER_LIST = "dbms/MDC/STAT/standard/MDCSTAT01901"
 

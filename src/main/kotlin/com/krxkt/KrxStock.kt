@@ -156,6 +156,53 @@ class KrxStock(
     }
 
     /**
+     * 개별종목 투자지표 기간 조회
+     *
+     * pykrx: stock.get_market_fundamental_by_ticker()
+     *
+     * @param startDate 시작 날짜 (yyyyMMdd)
+     * @param endDate 종료 날짜 (yyyyMMdd)
+     * @param ticker 종목코드 (예: "005930")
+     * @return 날짜별 투자지표 리스트 (PER, PBR, EPS, BPS, DPS, 배당수익률)
+     */
+    suspend fun getFundamentalByTicker(
+        startDate: String,
+        endDate: String,
+        ticker: String
+    ): List<StockFundamentalHistory> {
+        DateUtils.validateDateRange(startDate, endDate)
+
+        val isinCode = getIsinCode(ticker, endDate)
+        if (isinCode == null) {
+            println("KrxStock.getFundamentalByTicker: ISIN 코드 조회 실패 (ticker=$ticker)")
+            return emptyList()
+        }
+        println("KrxStock.getFundamentalByTicker: ticker=$ticker, isinCode=$isinCode, range=$startDate~$endDate")
+
+        return fetchByDateChunks(startDate, endDate) { chunkStart, chunkEnd ->
+            val params = mapOf(
+                "bld" to KrxEndpoints.Bld.FUNDAMENTAL_BY_TICKER,
+                "isuCd" to isinCode,
+                "strtDd" to chunkStart,
+                "endDd" to chunkEnd,
+                "mktId" to "ALL"
+            )
+
+            val response = client.post(params)
+            println("KrxStock.getFundamentalByTicker: raw response length=${response.length}, first 500 chars=${response.take(500)}")
+            val jsonArray = KrxJsonParser.parseOutBlock(response)
+            println("KrxStock.getFundamentalByTicker: parsed jsonArray size=${jsonArray.size}")
+            if (jsonArray.isNotEmpty()) {
+                println("KrxStock.getFundamentalByTicker: first item keys=${jsonArray[0].keySet()}")
+                println("KrxStock.getFundamentalByTicker: first item=${jsonArray[0]}")
+            }
+            val result = jsonArray.mapNotNull { StockFundamentalHistory.fromJson(it) }
+            println("KrxStock.getFundamentalByTicker: parsed result size=${result.size}")
+            result
+        }
+    }
+
+    /**
      * 종목 리스트 조회
      *
      * pykrx: stock.get_market_ticker_list("20210122")
