@@ -18,6 +18,7 @@ import com.krxkt.parser.getStringOrEmpty
  * @property date 거래일 (yyyyMMdd)
  * @property close 종가지수
  * @property per 가중 PER
+ * @property forwardPer 12개월 선행 PER (FWD_PER, 없으면 0.0)
  * @property pbr PBR (가중 주가순자산비율)
  * @property dividendYield 배당수익률 (%)
  */
@@ -25,6 +26,7 @@ data class IndexFundamentalHistory(
     val date: String,
     val close: Double,
     val per: Double,
+    val forwardPer: Double = 0.0,
     val pbr: Double,
     val dividendYield: Double
 ) {
@@ -44,6 +46,8 @@ data class IndexFundamentalHistory(
                 val close = KrxJsonParser.parseDouble(json.get("CLSPRC_IDX")?.asString) ?: return null
                 // WT_PER: 가중 PER (당일 미확정 시 "-" → null → 0.0)
                 val per = KrxJsonParser.parseDouble(json.get("WT_PER")?.asString) ?: 0.0
+                // FWD_PER: 12개월 선행 PER (필드 없거나 "-" → 0.0)
+                val forwardPer = KrxJsonParser.parseDouble(json.get("FWD_PER")?.asString) ?: 0.0
                 val pbr = KrxJsonParser.parseDouble(json.get("WT_STKPRC_NETASST_RTO")?.asString) ?: 0.0
                 val dividendYield = KrxJsonParser.parseDouble(json.get("DIV_YD")?.asString) ?: 0.0
 
@@ -51,6 +55,7 @@ data class IndexFundamentalHistory(
                     date = date,
                     close = close,
                     per = per,
+                    forwardPer = forwardPer,
                     pbr = pbr,
                     dividendYield = dividendYield
                 )
