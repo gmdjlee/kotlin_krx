@@ -3,6 +3,7 @@ package com.krxkt
 import com.krxkt.api.KrxClient
 import com.krxkt.api.KrxEndpoints
 import com.krxkt.model.DerivativeIndex
+import com.krxkt.model.IndexFundamentalHistory
 import com.krxkt.model.IndexInfo
 import com.krxkt.model.IndexMarket
 import com.krxkt.model.IndexOhlcv
@@ -79,6 +80,42 @@ class KrxIndex(
         val jsonArray = KrxJsonParser.parseOutBlock(response)
 
         return jsonArray.mapNotNull { IndexOhlcv.fromJson(it) }
+    }
+
+    /**
+     * 지수 PER/PBR/배당수익률 기간 조회
+     *
+     * @param startDate 시작 날짜 (yyyyMMdd)
+     * @param endDate 종료 날짜 (yyyyMMdd)
+     * @param ticker 지수 티커 (예: "1001" = KOSPI, "2001" = KOSDAQ)
+     * @return 날짜별 PER/PBR/배당수익률 리스트
+     */
+    suspend fun getIndexFundamental(
+        startDate: String,
+        endDate: String,
+        ticker: String
+    ): List<IndexFundamentalHistory> {
+        DateUtils.validateDateRange(startDate, endDate)
+        require(ticker.length >= 2) { "Invalid index ticker: $ticker" }
+
+        // MDCSTAT00702 uses indTpCd/idxIndCd (not indIdx/indIdx2)
+        // ticker "1001" → indTpCd="1", idxIndCd="001" (KOSPI)
+        // ticker "2001" → indTpCd="2", idxIndCd="001" (KOSDAQ)
+        val indTpCd = ticker.substring(0, 1)
+        val idxIndCd = ticker.substring(1).padStart(3, '0')
+
+        val params = mapOf(
+            "bld" to KrxEndpoints.Bld.INDEX_FUNDAMENTAL,
+            "indTpCd" to indTpCd,
+            "idxIndCd" to idxIndCd,
+            "strtDd" to startDate,
+            "endDd" to endDate
+        )
+
+        val response = client.post(params)
+        val jsonArray = KrxJsonParser.parseOutBlock(response)
+
+        return jsonArray.mapNotNull { IndexFundamentalHistory.fromJson(it) }
     }
 
     /**

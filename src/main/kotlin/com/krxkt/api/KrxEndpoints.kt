@@ -85,6 +85,9 @@ object KrxEndpoints {
         /** 지수 구성종목 (Portfolio Deposit File) */
         const val INDEX_PORTFOLIO = "dbms/MDC/STAT/standard/MDCSTAT00601"
 
+        /** 지수 PER/PBR/배당수익률 (기간 조회) */
+        const val INDEX_FUNDAMENTAL = "dbms/MDC/STAT/standard/MDCSTAT00702"
+
         // === Investor Trading ===
         /** 투자자별 거래실적 - 전체시장 기간합계 */
         const val INVESTOR_TRADING_MARKET_PERIOD = "dbms/MDC/STAT/standard/MDCSTAT02201"
